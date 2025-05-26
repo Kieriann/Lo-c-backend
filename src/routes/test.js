@@ -1,10 +1,9 @@
-import { Router } from 'express'
+const { Router } = require('express');
 
-const router = Router()
+const router = Router();
 
-router.post('/ping', (req, res) => {
-  console.log('✅ POST /ping atteinte')
-  res.send('pong')
-})
+router.get('/', (req, res) => {
+  res.json({ message: '✅ Test route ok' });
+});
 
-export default router
+module.exports = router;

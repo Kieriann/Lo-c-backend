@@ -7,6 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+//
+// ─── ADRESSE DU PROFIL ──────────────────────────────────────────────
+//
+
 model Address {
   id         Int      @id @default(autoincrement())
   address    String
@@ -18,12 +22,16 @@ model Address {
   profileId  Int      @unique
 }
 
+//
+// ─── UTILISATEUR (COMPTE GLOBAL) ────────────────────────────────────
+//
+
 model User {
   id                  Int              @id @default(autoincrement())
   email               String           @unique
   username            String
   password            String
-  isAdmin             Boolean @default(false)
+  isAdmin             Boolean          @default(false)
   Profile             Profile?
   Documents           Document[]
   Threads             Thread[]
@@ -33,9 +41,13 @@ model User {
   Trainings           Training[]
   Diplomas            Diploma[]
   Applications        Application[]
-  updatedAt           DateTime         @default(now())
-  createdAt           DateTime         @updatedAt
+  updatedAt           DateTime         @updatedAt
+  createdAt           DateTime         @default(now())
 }
+
+//
+// ─── DOCUMENTS LIÉS AU COMPTE ───────────────────────────────────────
+//
 
 model Document {
   id     String       @id @default(uuid())
@@ -44,23 +56,32 @@ model Document {
   userId Int          @unique
 }
 
+//
+// ─── PROFIL PROFESSIONNEL ──────────────────────────────────────────
+//
+
 model Profile {
-  id                 Int      @id @default(autoincrement())
-  firstname          String?  @default("")
-  lastname           String?  @default("")
-  phone              String?  @default("")
-  bio                String?  @default("")
-  languages          Json?    @default("[]")
-  siret              String?  @default("")
-  registrationNumber String?  @default("")
+  id                 Int       @id @default(autoincrement())
+  firstname          String?   @default("")
+  lastname           String?   @default("")
+  phone              String?   @default("")
+  bio                String?   @default("")
+  languages          Json?     @default("[]")
+  siret              String?   @default("")
+  registrationNumber String?   @default("")
   Address            Address?
-  smallDayRate       Int?     @default(0)
-  mediumDayRate      Int?     @default(0)
-  highDayRate        Int?     @default(0)
-  isEmployed         Boolean? @default(false)
-  User               User     @relation(fields: [userId], references: [id])
-  userId             Int      @unique
+  smallDayRate       Int?      @default(0)
+  mediumDayRate      Int?      @default(0)
+  highDayRate        Int?      @default(0)
+  isEmployed         Boolean?  @default(false)
+  availableDate      DateTime?
+  User               User      @relation(fields: [userId], references: [id])
+  userId             Int       @unique
 }
+
+//
+// ─── FORUM DE DISCUSSION ───────────────────────────────────────────
+//
 
 model Thread {
   id        Int      @id @default(autoincrement())
@@ -68,8 +89,8 @@ model Thread {
   posts     Post[]
   Author    User     @relation(fields: [authorId], references: [id])
   authorId  Int
-  updatedAt DateTime @default(now())
-  createdAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 }
 
 model Post {
@@ -79,9 +100,13 @@ model Post {
   authorId  Int
   Thread    Thread   @relation(fields: [threadId], references: [id])
   threadId  Int
-  updatedAt DateTime @default(now())
-  createdAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 }
+
+//
+// ─── RÉFÉRENCES CLIENTS ─────────────────────────────────────────────
+//
 
 model CustomerReference {
   id         Int      @id @default(autoincrement())
@@ -92,22 +117,35 @@ model CustomerReference {
   commentary String
   User       User     @relation(fields: [userId], references: [id])
   userId     Int
-  updatedAt  DateTime @default(now())
-  createdAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
 }
 
+//
+// ─── EXPÉRIENCES PROS ──────────────────────────────────────────────
+//
+
 model Experience {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  skills      Json
-  languages   Json
-  Domains     Domain[]
-  User        User     @relation(fields: [userId], references: [id])
-  userId      Int
-  updatedAt   DateTime @default(now())
-  createdAt   DateTime @updatedAt
+  id              Int      @id @default(autoincrement())
+  title           String
+  description     String
+  client          String?
+  domains         String?
+  skills          Json
+  languages       Json
+  realTitle       String?
+  realDescription String?
+  realFilePath    String?
+  Domains         Domain[]
+  User            User     @relation(fields: [userId], references: [id])
+  userId          Int
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
 }
+
+//
+// ─── FORMATIONS ET COMPÉTENCES ─────────────────────────────────────
+//
 
 model Training {
   id          Int      @id @default(autoincrement())
@@ -117,8 +155,8 @@ model Training {
   Domains     Domain[]
   User        User     @relation(fields: [userId], references: [id])
   userId      Int
-  updatedAt   DateTime @default(now())
-  createdAt   DateTime @updatedAt
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
 }
 
 model Diploma {
@@ -131,9 +169,13 @@ model Diploma {
   userId    Int
   Domain    Domain      @relation(fields: [domainId], references: [id])
   domainId  Int
-  updatedAt DateTime    @default(now())
-  createdAt DateTime    @updatedAt
+  updatedAt DateTime    @updatedAt
+  createdAt DateTime    @default(now())
 }
+
+//
+// ─── RÉALISATIONS / PROJETS / LIVRE BLANC ──────────────────────────
+//
 
 model Application {
   id             Int      @id @default(autoincrement())
@@ -146,9 +188,13 @@ model Application {
   domainId       Int
   User           User     @relation(fields: [userId], references: [id])
   userId         Int
-  updatedAt      DateTime @default(now())
-  createdAt      DateTime @updatedAt
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
 }
+
+//
+// ─── DOMAINES DE COMPÉTENCE ────────────────────────────────────────
+//
 
 model Domain {
   id          Int           @id @default(autoincrement())
@@ -158,6 +204,10 @@ model Domain {
   Diploma     Diploma[]
   Application Application[]
 }
+
+//
+// ─── TYPES ENUMS ───────────────────────────────────────────────────
+//
 
 enum DocumentType {
   ID_PHOTO

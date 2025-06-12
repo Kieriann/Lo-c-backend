@@ -4,34 +4,60 @@ const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 const authenticateToken = require('../middlewares/authMiddleware')
 
+// ─── Protection de la route par token ─────────────────────────────
 router.use(authenticateToken)
 
+//
+// ─── Recherche des profils avec filtre texte libre ─────────────────
+//
+
 router.get('/profils', async (req, res) => {
-  if (!req.user?.id) return res.status(401).json({ error: 'Non authentifié' })
-  const user = await prisma.user.findUnique({ where: { id: req.user.id } })
-  if (!user?.isAdmin) return res.status(403).json({ error: 'Accès interdit' })
   const search = req.query.search || ''
 
   try {
-    const profils = await prisma.profile.findMany({
+    const users = await prisma.user.findMany({
       where: {
         OR: [
-          { firstname: { contains: search } },
-          { lastname: { contains: search } },
-          { bio: { contains: search } },
+          { email: { contains: search } },
+          { username: { contains: search } },
+          {
+            Experiences: {
+              some: {
+                OR: [
+                  { title: { contains: search } },
+                  { description: { contains: search } },
+                ],
+              },
+            },
+          },
+          {
+            Profile: {
+              OR: [
+                { firstname: { contains: search } },
+                { lastname: { contains: search } },
+                { bio: { contains: search } },
+              ],
+            },
+          },
         ],
       },
       include: {
-        User: { select: { email: true } },
+        Profile: true,
       },
     })
 
+    const profils = users
+      .filter((u) => u.Profile)
+      .map((u) => ({
+        ...u.Profile,
+        User: { email: u.email },
+      }))
+
     res.json(profils)
   } catch (err) {
-    console.error('❌ Erreur admin profils :', err)
+    console.error('Erreur admin profils :', err)
     res.status(500).json({ error: 'Erreur serveur' })
   }
 })
-
 
 module.exports = router

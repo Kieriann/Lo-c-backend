@@ -1,6 +1,8 @@
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 
+// ─── Création de l'utilisateur administrateur Loïc ────────────────
+
 async function main() {
   const loic = await prisma.user.upsert({
     where: { email: 'loic.bernard15@yahoo.fr' },
@@ -8,7 +10,7 @@ async function main() {
     create: {
       email: 'loic.bernard15@yahoo.fr',
       username: 'Loïc',
-      password: 'admin', // à remplacer plus tard par un hashé
+      password: 'admin', //  à remplacer par un mot de passe hashé en prod
       isAdmin: true,
     },
   })

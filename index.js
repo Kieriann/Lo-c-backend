@@ -18,9 +18,10 @@ const app = express()
 // ─── Middlewares globaux ───────────────────────────────────────────
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://loic-frontend.vercel.app'],
+  origin: true,
   credentials: true,
 }))
+
 
 
 app.use(express.json())

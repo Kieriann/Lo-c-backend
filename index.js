@@ -48,8 +48,9 @@ app.get('/', (req, res) => {
 
 app.use((err, req, res, next) => {
   console.error('Erreur serveur :', err.stack)
-  res.status(500).send('Erreur interne du serveur')
+  res.status(500).json({ error: 'Erreur interne du serveur' })
 })
+
 
 // ─── Lancement du serveur ──────────────────────────────────────────
 

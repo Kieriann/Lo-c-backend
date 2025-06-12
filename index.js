@@ -46,10 +46,14 @@ app.get('/', (req, res) => {
 
 // ─── Gestion globale des erreurs ───────────────────────────────────
 
+// ─── Gestion globale des erreurs ───────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error('Erreur serveur :', err.stack)
-  res.status(500).json({ error: 'Erreur interne du serveur' })
+  console.error('💥 Erreur serveur :', err.stack)
+  res
+    .status(500)
+    .json({ error: err.message, stack: err.stack.split('\n').slice(0,5) })
 })
+
 
 
 // ─── Lancement du serveur ──────────────────────────────────────────

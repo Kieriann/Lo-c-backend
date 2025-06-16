@@ -9,10 +9,6 @@ const authenticateToken = require('../middlewares/authMiddleware')
 
 router.use(authenticateToken)
 
-//
-// ─── Configuration du dossier uploads et de Multer ─────────────────
-//
-
 const uploadDir = path.join(__dirname, '../../uploads')
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
 
@@ -26,10 +22,6 @@ const storage = multer.diskStorage({
 })
 const upload = multer({ storage })
 
-//
-// ─── Route POST pour enregistrer un profil complet ─────────────────
-//
-
 router.post('/profil', upload.fields([
   { name: 'photo' },
   { name: 'cv' },
@@ -37,12 +29,13 @@ router.post('/profil', upload.fields([
 ]), async (req, res) => {
   try {
     const userId = req.user.id
-    const profileData = JSON.parse(req.body.profile)
-    const addressData = JSON.parse(req.body.address)
-    const experiencesData = JSON.parse(req.body.experiences)
+    const profileData    = JSON.parse(req.body.profile)
+    const addressData    = JSON.parse(req.body.address)
+    const experiencesData= JSON.parse(req.body.experiences)
+    const prestationsData= JSON.parse(req.body.prestations)
 
-    // Gérer availableDate optionnel
-    const { availableDate, ...profileDataRest } = profileData
+    // availableDate optionnel
+    const { availableDate, ...profileRest } = profileData
     const availableDateParsed = availableDate
       ? new Date(availableDate)
       : undefined
@@ -50,12 +43,12 @@ router.post('/profil', upload.fields([
     const profile = await prisma.profile.upsert({
       where: { userId },
       update: {
-        ...profileDataRest,
-        ...(availableDateParsed !== undefined && { availableDate: availableDateParsed }),
+        ...profileRest,
+        ...(availableDateParsed && { availableDate: availableDateParsed }),
       },
       create: {
-        ...profileDataRest,
-        ...(availableDateParsed !== undefined && { availableDate: availableDateParsed }),
+        ...profileRest,
+        ...(availableDateParsed && { availableDate: availableDateParsed }),
         userId,
       },
     })
@@ -67,12 +60,8 @@ router.post('/profil', upload.fields([
     })
 
     await prisma.experience.deleteMany({ where: { userId } })
-
-    const realFiles = req.files?.realFiles || []
     for (let i = 0; i < experiencesData.length; i++) {
       const exp = experiencesData[i]
-      const realFile = realFiles.find(f => f.originalname === exp.realFilePath)
-
       await prisma.experience.create({
         data: {
           title: exp.title,
@@ -89,8 +78,20 @@ router.post('/profil', upload.fields([
       })
     }
 
+    await prisma.prestation.deleteMany({ where: { userId } })
+    for (const p of prestationsData) {
+      await prisma.prestation.create({
+        data: {
+          type: p.type,
+          tech: p.tech,
+          level: p.level,
+          userId,
+        },
+      })
+    }
+
     const photoFile = req.files?.photo?.[0]
-    const cvFile = req.files?.cv?.[0]
+    const cvFile    = req.files?.cv?.[0]
 
     if (photoFile) {
       await prisma.document.upsert({
@@ -115,10 +116,6 @@ router.post('/profil', upload.fields([
   }
 })
 
-//
-// ─── Route GET pour récupérer toutes les infos d’un utilisateur ───
-//
-
 router.get('/profil', async (req, res) => {
   try {
     const userId = req.user.id
@@ -132,13 +129,15 @@ router.get('/profil', async (req, res) => {
     })
 
     const experiences = await prisma.experience.findMany({ where: { userId } })
-    const documents = await prisma.document.findMany({ where: { userId } })
+    const documents   = await prisma.document.findMany({ where: { userId } })
+    const prestations = await prisma.prestation.findMany({ where: { userId } })
 
     res.json({
       isAdmin: user.isAdmin,
       profile: user.Profile,
       experiences,
       documents,
+      prestations,
     })
   } catch (err) {
     console.error('Erreur GET /profil', err)

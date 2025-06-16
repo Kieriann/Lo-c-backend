@@ -9,29 +9,33 @@ dotenv.config()
 
 // ─── Import des routes ─────────────────────────────────────────────
 
-const authRoutes = require('./src/routes/authRoutes.js')
+const authRoutes    = require('./src/routes/authRoutes.js')
 const profileRoutes = require('./src/routes/profile.js')
-const adminRoutes = require('./src/routes/admin')
+const adminRoutes   = require('./src/routes/admin')
 
 const app = express()
 
-// ─── Middlewares globaux ───────────────────────────────────────────
+// ─── CORS ──────────────────────────────────────────────────────────
 
 app.use(cors({
-  origin: true,
+  origin: 'https://loic-frontend.vercel.app',
+  credentials: true,
+}))
+app.options('*', cors({
+  origin: 'https://loic-frontend.vercel.app',
   credentials: true,
 }))
 
-
+// ─── Middlewares globaux ───────────────────────────────────────────
 
 app.use(express.json())
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 // ─── Routes API ─────────────────────────────────────────────────────
 
-app.use('/api/auth', authRoutes)
+app.use('/api/auth',    authRoutes)
 app.use('/api/profile', profileRoutes)
-app.use('/api/admin', adminRoutes)
+app.use('/api/admin',   adminRoutes)
 
 // ─── Routes de test/debug ──────────────────────────────────────────
 
@@ -46,15 +50,12 @@ app.get('/', (req, res) => {
 
 // ─── Gestion globale des erreurs ───────────────────────────────────
 
-// ─── Gestion globale des erreurs ───────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('💥 Erreur serveur :', err.stack)
   res
     .status(500)
     .json({ error: err.message, stack: err.stack.split('\n').slice(0,5) })
 })
-
-
 
 // ─── Lancement du serveur ──────────────────────────────────────────
 

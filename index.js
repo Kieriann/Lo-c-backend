@@ -21,10 +21,7 @@ app.use(cors({
   origin: 'https://loic-frontend.vercel.app',
   credentials: true,
 }))
-app.options('*', cors({
-  origin: 'https://loic-frontend.vercel.app',
-  credentials: true,
-}))
+
 
 // ─── Middlewares globaux ───────────────────────────────────────────
 

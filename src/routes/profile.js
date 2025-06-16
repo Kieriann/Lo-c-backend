@@ -41,10 +41,23 @@ router.post('/profil', upload.fields([
     const addressData = JSON.parse(req.body.address)
     const experiencesData = JSON.parse(req.body.experiences)
 
+    // Gérer availableDate optionnel
+    const { availableDate, ...profileDataRest } = profileData
+    const availableDateParsed = availableDate
+      ? new Date(availableDate)
+      : undefined
+
     const profile = await prisma.profile.upsert({
       where: { userId },
-      update: { ...profileData },
-      create: { ...profileData, userId },
+      update: {
+        ...profileDataRest,
+        ...(availableDateParsed !== undefined && { availableDate: availableDateParsed }),
+      },
+      create: {
+        ...profileDataRest,
+        ...(availableDateParsed !== undefined && { availableDate: availableDateParsed }),
+        userId,
+      },
     })
 
     await prisma.address.upsert({

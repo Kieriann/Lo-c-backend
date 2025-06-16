@@ -18,9 +18,10 @@ const app = express()
 // ─── CORS ──────────────────────────────────────────────────────────
 
 app.use(cors({
-  origin: 'https://loic-frontend.vercel.app',
+  origin: (origin, cb) => cb(null, true),
   credentials: true,
 }))
+
 
 
 // ─── Middlewares globaux ───────────────────────────────────────────

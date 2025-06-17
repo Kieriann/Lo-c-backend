@@ -1,26 +1,37 @@
-// src/utils/mailer.js
+const nodemailer = require('nodemailer')
+
+// Configuration du transport SMTP à partir des variables d'environnement
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT || 587),
+  secure: Number(process.env.SMTP_PORT) === 465, // true pour port 465, false pour les autres
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+})
 
 /**
- * sendEmail({ to, subject, text })
- * Pour l’instant on logge simplement, plus tard on pourra
- * brancher un vrai provider (Sendgrid, Mailgun, Nodemailer…).
- *
- * Retourne une promesse qui résout en { to, subject, text }
- * ou rejette en cas d’erreur simulée.
+ * sendEmail({ to, subject, text, html })
+ * Envoie un e-mail via Nodemailer.
+ * @returns {Promise<Object>} Le résultat de l’envoi
  */
-async function sendEmail({ to, subject, text }) {
+async function sendEmail({ to, subject, text, html }) {
+  const mailOptions = {
+    from: process.env.EMAIL_FROM,
+    to,
+    subject,
+    text,
+    html,
+  }
+
   try {
-    console.log('=== Envoi d’un e-mail ===')
-    console.log(`À     : ${to}`)
-    console.log(`Objet : ${subject}`)
-    console.log('Contenu :')
-    console.log(text)
-    console.log('=== Email simulé envoyé ===')
-    // on renvoie le payload pour test unitaire / chaining
-    return { to, subject, text }
+    const info = await transporter.sendMail(mailOptions)
+    console.log('=== E-mail envoyé ===')
+    console.log(`MessageId: ${info.messageId}`)
+    return info
   } catch (err) {
-    console.error('Erreur lors de l’envoi d’e-mail simulé :', err)
-    // on rejette pour qu’un appelant puisse faire un catch
+    console.error('Erreur lors de l’envoi d’e-mail :', err)
     throw err
   }
 }

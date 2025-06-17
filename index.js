@@ -9,6 +9,11 @@ dotenv.config()
 
 // ─── Import des routes ─────────────────────────────────────────────
 
+app.get('/healthz', (_req, res) => {
+  res.status(200).send('OK');
+});
+
+
 const authRoutes    = require('./src/routes/authRoutes.js')
 const profileRoutes = require('./src/routes/profile.js')
 const adminRoutes   = require('./src/routes/admin')

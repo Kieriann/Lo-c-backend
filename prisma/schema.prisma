@@ -44,6 +44,8 @@ model User {
   Applications        Application[]
   updatedAt           DateTime            @updatedAt
   createdAt           DateTime            @default(now())
+  emailConfirmed      Boolean             @default(false)
+  emailConfirmationToken  String?         @unique 
 }
 
 //

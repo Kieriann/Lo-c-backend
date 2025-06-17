@@ -1,51 +1,52 @@
+// prisma/seed.js
+
+require('dotenv').config()           
 const { PrismaClient } = require('@prisma/client')
 const bcrypt = require('bcrypt')
 
 const prisma = new PrismaClient()
 
 async function main() {
-  // 1) Création / mise à jour de l'admin Loïc
-  const loicPassword = await bcrypt.hash('admin', 10)
+  // 1) Admin Loïc
+  const loicPasswordHash = await bcrypt.hash('admin', 10)
   const loic = await prisma.user.upsert({
     where: { email: 'loic.bernard15@yahoo.fr' },
     update: {
-      password: loicPassword,
+      password: loicPasswordHash,
       emailConfirmed: true,
     },
     create: {
       email: 'loic.bernard15@yahoo.fr',
       username: 'Loïc',
-      password: loicPassword,
+      password: loicPasswordHash,
       isAdmin: true,
       emailConfirmed: true,
     },
   })
-  console.log('✅ Utilisateur Loïc créé / mis à jour :', loic.email)
+  console.log('✅ Loïc prêt :', loic.email)
 
-  // 2) Création / mise à jour de l'utilisateur de test
-  const testPasswordPlain = 'test1234'
-  const testPasswordHash = await bcrypt.hash(testPasswordPlain, 10)
+  // 2) Utilisateur de test
+  const testPlain = 'test1234'
+  const testHash = await bcrypt.hash(testPlain, 10)
   const testUser = await prisma.user.upsert({
     where: { email: 'test@freesbiz.fr' },
     update: {
-      password: testPasswordHash,
+      password: testHash,
       emailConfirmed: true,
     },
     create: {
       email: 'test@freesbiz.fr',
       username: 'testuser',
-      password: testPasswordHash,
+      password: testHash,
       isAdmin: false,
       emailConfirmed: true,
     },
   })
-  console.log('✅ Utilisateur de test créé / mis à jour :')
-  console.log(`   email: ${testUser.email}`)
-  console.log(`   mdp  : ${testPasswordPlain}`)
+  console.log('✅ Test prêt :', testUser.email, '/', testPlain)
 }
 
 main()
-  .catch((e) => {
+  .catch(e => {
     console.error(e)
     process.exit(1)
   })

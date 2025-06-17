@@ -2,11 +2,13 @@
   "name": "loic-backend",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {
-    "dev": "nodemon index.js",
-    "postinstall": "npx prisma generate && npx prisma migrate deploy",
-    "start": "node index.js"
-  },
+"scripts": {
+  "dev": "nodemon index.js",
+  "seed": "node prisma/seed.js",
+  "postinstall": "npx prisma generate && npx prisma migrate deploy",
+  "start": "node index.js"
+},
+
   "keywords": [],
   "author": "",
   "license": "ISC",

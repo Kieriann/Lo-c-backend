@@ -1,39 +1,18 @@
-const nodemailer = require('nodemailer')
-
-// Configuration du transport SMTP à partir des variables d'environnement
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 587),
-  secure: Number(process.env.SMTP_PORT) === 465, // true pour port 465, false pour les autres
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-})
+// src/utils/mailer.js
 
 /**
- * sendEmail({ to, subject, text, html })
- * Envoie un e-mail via Nodemailer.
- * @returns {Promise<Object>} Le résultat de l’envoi
+ * sendEmail({ to, subject, text })
+ * Pour l’instant, on simule l’envoi en loggant tout simplement.
+ * Retourne une promesse qui résout en { to, subject, text }.
  */
-async function sendEmail({ to, subject, text, html }) {
-  const mailOptions = {
-    from: process.env.EMAIL_FROM,
-    to,
-    subject,
-    text,
-    html,
-  }
-
-  try {
-    const info = await transporter.sendMail(mailOptions)
-    console.log('=== E-mail envoyé ===')
-    console.log(`MessageId: ${info.messageId}`)
-    return info
-  } catch (err) {
-    console.error('Erreur lors de l’envoi d’e-mail :', err)
-    throw err
-  }
+async function sendEmail({ to, subject, text }) {
+  console.log('=== Simulated e-mail send ===')
+  console.log(`To      : ${to}`)
+  console.log(`Subject : ${subject}`)
+  console.log('Content :')
+  console.log(text)
+  console.log('=== End of simulation ===')
+  return { to, subject, text }
 }
 
 module.exports = { sendEmail }

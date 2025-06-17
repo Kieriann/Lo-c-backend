@@ -51,26 +51,35 @@ Si tu n’as pas demandé cet e-mail, ignore-le.
 // ─── Confirmation d’e-mail ─────────────────────────────────────────
 //
 async function confirmEmail(req, res) {
-  const { token } = req.query
+  const { token } = req.query;
   if (!token) {
-    return res.status(400).send('Token manquant')
+    return res.status(400).send('Token manquant');
   }
+
+  // Recherche de l’utilisateur par token
   const user = await prisma.user.findUnique({
     where: { emailConfirmationToken: token }
-  })
+  });
   if (!user) {
-    return res.status(404).send('Token invalide ou expiré')
+    return res.status(404).send('Token invalide');
   }
+
+  // Activation du compte
   await prisma.user.update({
     where: { id: user.id },
     data: {
       emailConfirmed: true,
       emailConfirmationToken: null
     }
-  })
-  // Redirige vers une page de confirmation sur le front, ou renvoie un message simple :
-  return res.redirect(`${process.env.FRONTEND_URL}/email-confirmed`)
+  });
+
+  return res
+    .status(200)
+    .json({ message: 'E-mail confirmé ! Vous pouvez maintenant vous connecter.' });
 }
+
+module.exports = { signup, login, me, confirmEmail };
+
 
 //
 // ─── Connexion ─────────────────────────────────────────────────────

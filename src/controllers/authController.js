@@ -1,3 +1,4 @@
+// controllers/authController.js
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
@@ -27,7 +28,7 @@ async function signup(req, res) {
   const emailConfirmationToken = crypto.randomBytes(32).toString('hex')
 
   // Créer l’utilisateur avec emailConfirmed à false et le token
-  const user = await prisma.user.create({
+  await prisma.user.create({
     data: {
       email,
       username,
@@ -38,17 +39,19 @@ async function signup(req, res) {
     },
   })
 
-  // Construire le lien de confirmation
-  const confirmUrl = `${process.env.FRONTEND_URL}/confirm-email?token=${emailConfirmationToken}`
+  // Construire le lien de confirmation vers notre API
+  const backendUrl = process.env.BACKEND_URL || process.env.VITE_API_URL
+  const confirmUrl = `${backendUrl}/api/auth/confirm-email?token=${emailConfirmationToken}`
 
-  // Tenter d’envoyer l’email, sans planter si ça échoue
+  // Envoyer l’email de confirmation
   try {
     await sendEmail({
-      to: user.email,
+      to: email,
       subject: 'Confirme ton adresse e-mail',
       text: `
-Bienvenue chez Free’s Biz !
+Bonjour ${username},
 
+Merci de t'être inscrit·e sur Free's Biz.
 Pour activer ton compte, clique sur ce lien :
 ${confirmUrl}
 
@@ -57,10 +60,8 @@ Si tu n’as pas demandé cet e-mail, ignore-le.
     })
   } catch (mailErr) {
     console.error('⚠️ Erreur lors de l’envoi de l’email de confirmation :', mailErr)
-    // On continue quand même, l’inscription est validée même si le mail n’a pas pu partir
   }
 
-  // Répondre toujours 201 pour valider l’inscription
   return res
     .status(201)
     .json({ message: 'Inscription réussie ! Vérifie ta boîte mail pour confirmer ton adresse.' })
@@ -77,13 +78,13 @@ async function confirmEmail(req, res) {
 
   // Recherche de l’utilisateur par token
   const user = await prisma.user.findUnique({
-    where: { emailConfirmationToken: token },
+    where: { emailConfirmationToken: String(token) },
   })
   if (!user) {
-    return res.status(404).send('Token invalide')
+    return res.status(404).send('Token invalide ou expiré')
   }
 
-  // Activation du compte
+  // Activation du compte et suppression du token
   await prisma.user.update({
     where: { id: user.id },
     data: {
@@ -138,7 +139,7 @@ async function me(req, res) {
 
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
-    select: { id: true, email: true },
+    select: { id: true, email: true, username: true },
   })
   if (!user) {
     return res.status(404).json({ error: 'Utilisateur non trouvé' })

@@ -1,9 +1,22 @@
 // controllers/authController.js
-const bcrypt = require('bcrypt')
-const jwt = require('jsonwebtoken')
-const crypto = require('crypto')
-const prisma = require('../utils/prismaClient')
-const { sendEmail } = require('../utils/mailer')
+
+const bcrypt     = require('bcrypt')
+const jwt        = require('jsonwebtoken')
+const crypto     = require('crypto')
+const prisma     = require('../utils/prismaClient')
+const nodemailer = require('nodemailer')
+require('dotenv').config()
+
+// Configure ton envoi SMTP
+const transporter = nodemailer.createTransport({
+  host:     process.env.SMTP_HOST,
+  port:     Number(process.env.SMTP_PORT),
+  secure:   process.env.SMTP_SECURE === 'true',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+})
 
 //
 // ─── Création de compte (inscription) ──────────────────────────────
@@ -14,21 +27,16 @@ async function signup(req, res) {
     return res.status(400).json({ error: 'Email et mot de passe requis' })
   }
 
-  // Vérifier si l’utilisateur existe déjà
   const existingUser = await prisma.user.findUnique({ where: { email } })
   if (existingUser) {
     return res.status(409).json({ error: 'Email déjà utilisé' })
   }
 
-  // Hasher le mot de passe
   const hashedPassword = await bcrypt.hash(password, 10)
-  const username = email.split('@')[0]
-
-  // Générer un token de confirmation unique
+  const username       = email.split('@')[0]
   const emailConfirmationToken = crypto.randomBytes(32).toString('hex')
 
-  // Créer l’utilisateur avec emailConfirmed à false et le token
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       email,
       username,
@@ -39,32 +47,25 @@ async function signup(req, res) {
     },
   })
 
-  // Construire le lien de confirmation vers notre API
   const backendUrl = process.env.BACKEND_URL || process.env.VITE_API_URL
   const confirmUrl = `${backendUrl}/api/auth/confirm-email?token=${emailConfirmationToken}`
 
-  // Envoyer l’email de confirmation
+  // Envoi réel du mail de confirmation
   try {
-    await sendEmail({
-      to: email,
+    await transporter.sendMail({
+      from:    `"Free's Biz" <no-reply@freesbiz.fr>`,
+      to:      email,
       subject: 'Confirme ton adresse e-mail',
-      text: `
-Bonjour ${username},
-
-Merci de t'être inscrit·e sur Free's Biz.
-Pour activer ton compte, clique sur ce lien :
-${confirmUrl}
-
-Si tu n’as pas demandé cet e-mail, ignore-le.
-      `,
+      text:    `Bonjour ${username},\n\nMerci de t'être inscrit·e sur Free's Biz.\nPour activer ton compte, clique sur ce lien :\n${confirmUrl}\n\nSi tu n’as pas demandé cet e-mail, ignore-le.`,
     })
   } catch (mailErr) {
-    console.error('⚠️ Erreur lors de l’envoi de l’email de confirmation :', mailErr)
+    console.error('Erreur envoi mail confirmation :', mailErr)
+    // on continue même en cas d’erreur d’envoi
   }
 
   return res
     .status(201)
-    .json({ message: 'Inscription réussie ! Vérifie ta boîte mail pour confirmer ton adresse.' })
+    .json({ message: 'Inscription réussie ! Vérifiez votre boîte mail pour confirmer votre adresse.' })
 }
 
 //
@@ -72,19 +73,13 @@ Si tu n’as pas demandé cet e-mail, ignore-le.
 //
 async function confirmEmail(req, res) {
   const { token } = req.query
-  if (!token) {
-    return res.status(400).send('Token manquant')
-  }
+  if (!token) return res.status(400).send('Token manquant')
 
-  // Recherche de l’utilisateur par token
   const user = await prisma.user.findUnique({
     where: { emailConfirmationToken: String(token) },
   })
-  if (!user) {
-    return res.status(404).send('Token invalide ou expiré')
-  }
+  if (!user) return res.status(404).send('Token invalide ou expiré')
 
-  // Activation du compte et suppression du token
   await prisma.user.update({
     where: { id: user.id },
     data: {
@@ -108,9 +103,7 @@ async function login(req, res) {
   }
 
   const user = await prisma.user.findUnique({ where: { email } })
-  if (!user) {
-    return res.status(404).json({ error: 'Utilisateur non trouvé' })
-  }
+  if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' })
   if (!user.emailConfirmed) {
     return res.status(403).json({ error: 'Email non confirmé' })
   }

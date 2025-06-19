@@ -1,22 +1,13 @@
 // controllers/authController.js
 
-const bcrypt     = require('bcrypt')
-const jwt        = require('jsonwebtoken')
-const crypto     = require('crypto')
-const prisma     = require('../utils/prismaClient')
-const nodemailer = require('nodemailer')
+const bcrypt   = require('bcrypt')
+const jwt      = require('jsonwebtoken')
+const crypto   = require('crypto')
+const prisma   = require('../utils/prismaClient')
+const sgMail   = require('@sendgrid/mail')
 require('dotenv').config()
 
-// Configure ton envoi SMTP
-const transporter = nodemailer.createTransport({
-  host:     process.env.SMTP_HOST,
-  port:     Number(process.env.SMTP_PORT),
-  secure:   process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-})
+sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 //
 // ─── Création de compte (inscription) ──────────────────────────────
@@ -34,38 +25,33 @@ async function signup(req, res) {
 
   const hashedPassword = await bcrypt.hash(password, 10)
   const username       = email.split('@')[0]
-  const emailConfirmationToken = crypto.randomBytes(32).toString('hex')
+  const token          = crypto.randomBytes(32).toString('hex')
 
-  const user = await prisma.user.create({
+  await prisma.user.create({
     data: {
       email,
       username,
       password: hashedPassword,
       isAdmin: email === 'loic.bernard15@yahoo.fr',
       emailConfirmed: false,
-      emailConfirmationToken,
+      emailConfirmationToken: token,
     },
   })
 
-  const backendUrl = process.env.BACKEND_URL || process.env.VITE_API_URL
-  const confirmUrl = `${backendUrl}/api/auth/confirm-email?token=${emailConfirmationToken}`
+  const confirmUrl = `${process.env.BACKEND_URL}/api/auth/confirm-email?token=${token}`
 
-  // Envoi réel du mail de confirmation
-  try {
-    await transporter.sendMail({
-      from:    `"Free's Biz" <no-reply@freesbiz.fr>`,
-      to:      email,
-      subject: 'Confirme ton adresse e-mail',
-      text:    `Bonjour ${username},\n\nMerci de t'être inscrit·e sur Free's Biz.\nPour activer ton compte, clique sur ce lien :\n${confirmUrl}\n\nSi tu n’as pas demandé cet e-mail, ignore-le.`,
-    })
-  } catch (mailErr) {
-    console.error('Erreur envoi mail confirmation :', mailErr)
-    // on continue même en cas d’erreur d’envoi
-  }
+  // Envoi du mail via SendGrid
+  await sgMail.send({
+    to:      email,
+    from:    process.env.EMAIL_FROM,
+    subject: 'Confirme ton adresse e-mail',
+    text:    `Bonjour ${username},\n\nPour activer ton compte, clique ici :\n${confirmUrl}`,
+    html:    `<p>Bonjour ${username},</p><p>Pour activer ton compte, clique <a href="${confirmUrl}">ici</a>.</p>`,
+  })
 
   return res
     .status(201)
-    .json({ message: 'Inscription réussie ! Vérifiez votre boîte mail pour confirmer votre adresse.' })
+    .json({ message: 'Inscription réussie ! Vérifiez vos mails pour confirmer votre adresse.' })
 }
 
 //
@@ -113,13 +99,13 @@ async function login(req, res) {
     return res.status(401).json({ error: 'Mot de passe incorrect' })
   }
 
-  const token = jwt.sign(
+  const jwtToken = jwt.sign(
     { userId: user.id, isAdmin: user.isAdmin },
     process.env.JWT_SECRET,
     { expiresIn: '7d' }
   )
 
-  res.json({ token, user: { id: user.id, email: user.email } })
+  res.json({ token: jwtToken, user: { id: user.id, email: user.email } })
 }
 
 //

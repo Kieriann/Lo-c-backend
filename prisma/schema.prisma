@@ -76,6 +76,7 @@ model Profile {
   smallDayRate       Int?      @default(0)
   mediumDayRate      Int?      @default(0)
   highDayRate        Int?      @default(0)
+  teleworkDays       Int       @default(0) 
   isEmployed         Boolean?  @default(false)
   availableDate      DateTime?
   User               User      @relation(fields: [userId], references: [id])

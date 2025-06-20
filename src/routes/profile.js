@@ -151,7 +151,7 @@ router.get('/documents/me', async (req, res) => {
     const documents = await prisma.document.findMany({ where: { userId } })
     res.json(documents)
   } catch (err) {
-    console.error('Erreur GET /documents/me', err)
+    console.error('Erreur GET api/documents/me', err)
     res.status(500).json({ error: 'Erreur serveur' })
   }
 })

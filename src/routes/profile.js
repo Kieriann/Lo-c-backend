@@ -97,13 +97,15 @@ if (photoFile) {
     where: { userId },
     update: {
       type: 'ID_PHOTO',
-      fileName: photoFile.originalname
+      fileName: photoFile.filename,
+      originalName: photoFile.originalname
+
     },
     create: {
       userId,
       type: 'ID_PHOTO',
-      fileName: photoFile.originalname
-    }
+      fileName: photoFile.filename,
+      originalName: photoFile.originalname    }
   })
 }
 if (cvFile) {
@@ -111,13 +113,15 @@ if (cvFile) {
     where: { userId },
     update: {
       type: 'CV',
-      fileName: cvFile.originalname
-    },
+      fileName: cvFile.filename,
+      originalName: cvFile.originalname
+        },
     create: {
       userId,
       type: 'CV',
-      fileName: cvFile.originalname
-    }
+      fileName: cvFile.filename,
+      originalName: cvFile.originalname
+        }
   })
 }
 

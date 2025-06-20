@@ -57,7 +57,8 @@ model Document {
   type   DocumentType
   User   User         @relation(fields: [userId], references: [id])
   userId Int          @unique
-  fileName            String?
+  fileName            String
+  originalName        String
 }
 
 //

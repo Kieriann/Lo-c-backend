@@ -15,7 +15,6 @@ router.get('/me', authMiddleware, async (req, res, next) => {
       select: {
         id: true,
         type: true,
-        path: true,
         fileName: true,
       }
     })

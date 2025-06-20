@@ -28,7 +28,7 @@ model Address {
 
 model User {
   id                  Int                 @id @default(autoincrement())
-  email               String              @unique
+  email               String              @unique @db.VarChar(255)
   username            String
   password            String
   isAdmin             Boolean             @default(false)

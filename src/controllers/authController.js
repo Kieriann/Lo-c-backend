@@ -1,5 +1,3 @@
-// controllers/authController.js
-
 const bcrypt   = require('bcrypt')
 const jwt      = require('jsonwebtoken')
 const crypto   = require('crypto')
@@ -13,11 +11,13 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 // ─── Création de compte (inscription) ──────────────────────────────
 //
 async function signup(req, res) {
-  const { email, password } = req.body
-  if (!email || !password) {
+  const emailRaw = req.body.email
+  const password = req.body.password
+  if (!emailRaw || !password) {
     return res.status(400).json({ error: 'Email et mot de passe requis' })
   }
 
+  const email = emailRaw.toLowerCase()
   const existingUser = await prisma.user.findUnique({ where: { email } })
   if (existingUser) {
     return res.status(409).json({ error: 'Email déjà utilisé' })
@@ -83,12 +83,14 @@ async function confirmEmail(req, res) {
 // ─── Connexion ─────────────────────────────────────────────────────
 //
 async function login(req, res) {
-  const { email, password } = req.body
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email et mot de passe requis' })
-  }
+const emailRaw = req.body.email
+const password = req.body.password
+if (!emailRaw || !password) {
+  return res.status(400).json({ error: 'Email et mot de passe requis' })
+}
+const normalizedEmail = emailRaw.toLowerCase()
+const user = await prisma.user.findUnique({ where: { email: normalizedEmail } })
 
-  const user = await prisma.user.findUnique({ where: { email } })
   if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' })
   if (!user.emailConfirmed) {
     return res.status(403).json({ error: 'Email non confirmé' })

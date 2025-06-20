@@ -144,6 +144,19 @@ router.get('/profil', async (req, res) => {
         Profile: { include: { Address: true } }
       }
     })
+
+router.get('/documents/me', async (req, res) => {
+  try {
+    const userId = req.user.id
+    const documents = await prisma.document.findMany({ where: { userId } })
+    res.json(documents)
+  } catch (err) {
+    console.error('Erreur GET /documents/me', err)
+    res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
+
     const experiences = await prisma.experience.findMany({ where: { userId } })
     const documents   = await prisma.document.findMany({ where: { userId } })
     const prestations = await prisma.prestation.findMany({ where: { userId } })

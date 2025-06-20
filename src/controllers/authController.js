@@ -38,8 +38,8 @@ async function signup(req, res) {
     },
   })
 
-  const confirmUrl = `${process.env.BACKEND_URL}/api/auth/confirm-email?token=${token}`
-
+const confirmUrl = `${process.env.FRONT_URL}/confirm-email?token=${emailConfirmationToken}`
+cd
   // Envoi du mail via SendGrid
   await sgMail.send({
     to:      email,

@@ -7,6 +7,7 @@ const authMiddleware = require('../middlewares/authMiddleware')
 // ─── Route : récupérer les documents du user connecté ────────────────
 router.get('/me', authMiddleware, async (req, res, next) => {
   try {
+        console.log(req.user)
     const userId = req.user.id
 
     const documents = await prisma.document.findMany({

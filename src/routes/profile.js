@@ -145,16 +145,17 @@ router.get('/profil', async (req, res) => {
       }
     })
 
-router.get('/documents/me', async (req, res) => {
+router.get('/me', async (req, res) => {
   try {
     const userId = req.user.id
     const documents = await prisma.document.findMany({ where: { userId } })
     res.json(documents)
   } catch (err) {
-    console.error('Erreur GET api/documents/me', err)
+    console.error('Erreur GET /api/documents/me', err)
     res.status(500).json({ error: 'Erreur serveur' })
   }
 })
+
 
 
     const experiences = await prisma.experience.findMany({ where: { userId } })

@@ -27,7 +27,7 @@ async function signup(req, res) {
   const username       = email.split('@')[0]
   const token          = crypto.randomBytes(32).toString('hex')
 
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       email,
       username,
@@ -38,7 +38,7 @@ async function signup(req, res) {
     },
   })
 
-const confirmUrl = `${process.env.FRONT_URL}/confirm-email?token=${user.emailConfirmationToken}`;
+  const confirmUrl = `${process.env.FRONT_URL}/confirm-email?token=${user.emailConfirmationToken}`
 
   // Envoi du mail via SendGrid
   await sgMail.send({

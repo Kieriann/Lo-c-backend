@@ -89,6 +89,23 @@ router.post(
         })
       }
 
+      if (req.body.removePhoto === 'true') {
+  const photoDoc = await prisma.document.findFirst({ where: { userId, type: 'ID_PHOTO' } })
+  if (photoDoc) {
+    fs.unlinkSync(path.join(uploadDir, photoDoc.fileName))
+    await prisma.document.delete({ where: { id: photoDoc.id } })
+  }
+}
+
+if (req.body.removeCV === 'true') {
+  const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'CV' } })
+  if (cvDoc) {
+    fs.unlinkSync(path.join(uploadDir, cvDoc.fileName))
+    await prisma.document.delete({ where: { id: cvDoc.id } })
+  }
+}
+
+
       const photoFile = req.files?.photo?.[0]
       const cvFile    = req.files?.cv?.[0]
 

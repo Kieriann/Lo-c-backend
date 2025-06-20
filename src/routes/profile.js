@@ -92,20 +92,35 @@ router.post(
       const photoFile = req.files?.photo?.[0]
       const cvFile    = req.files?.cv?.[0]
 
-      if (photoFile) {
-        await prisma.document.upsert({
-          where: { userId },
-          update: { type: 'ID_PHOTO' },
-          create: { userId, type: 'ID_PHOTO' }
-        })
-      }
-      if (cvFile) {
-        await prisma.document.upsert({
-          where: { userId },
-          update: { type: 'CV' },
-          create: { userId, type: 'CV' }
-        })
-      }
+if (photoFile) {
+  await prisma.document.upsert({
+    where: { userId },
+    update: {
+      type: 'ID_PHOTO',
+      fileName: photoFile.originalname
+    },
+    create: {
+      userId,
+      type: 'ID_PHOTO',
+      fileName: photoFile.originalname
+    }
+  })
+}
+if (cvFile) {
+  await prisma.document.upsert({
+    where: { userId },
+    update: {
+      type: 'CV',
+      fileName: cvFile.originalname
+    },
+    create: {
+      userId,
+      type: 'CV',
+      fileName: cvFile.originalname
+    }
+  })
+}
+
 
       res.status(200).json({ success: true })
     } catch (err) {

@@ -29,11 +29,15 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 const authRoutes    = require('./src/routes/authRoutes.js')
 const profileRoutes = require('./src/routes/profile.js')
 const adminRoutes   = require('./src/routes/admin')
+const documentRoutes = require('./src/routes/documentRoutes')
+
 
 // ─── Routes API ──────────────────────────────────────────────────────
 app.use('/api/auth',    authRoutes)
 app.use('/api/profile', profileRoutes)
 app.use('/api/admin',   adminRoutes)
+app.use('/api/documents', documentRoutes)
+
 
 // ─── Routes de test/debug ───────────────────────────────────────────
 app.get('/test', (req, res) => {

@@ -20,12 +20,14 @@ CREATE TABLE "Address" (
 -- CreateTable
 CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
-    "email" TEXT NOT NULL,
+    "email" VARCHAR(255) NOT NULL,
     "username" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "isAdmin" BOOLEAN NOT NULL DEFAULT false,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "emailConfirmed" BOOLEAN NOT NULL DEFAULT false,
+    "emailConfirmationToken" TEXT,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -35,6 +37,8 @@ CREATE TABLE "Document" (
     "id" TEXT NOT NULL,
     "type" "DocumentType" NOT NULL,
     "userId" INTEGER NOT NULL,
+    "fileName" TEXT NOT NULL,
+    "originalName" TEXT NOT NULL,
 
     CONSTRAINT "Document_pkey" PRIMARY KEY ("id")
 );
@@ -52,6 +56,7 @@ CREATE TABLE "Profile" (
     "smallDayRate" INTEGER DEFAULT 0,
     "mediumDayRate" INTEGER DEFAULT 0,
     "highDayRate" INTEGER DEFAULT 0,
+    "teleworkDays" INTEGER NOT NULL DEFAULT 0,
     "isEmployed" BOOLEAN DEFAULT false,
     "availableDate" TIMESTAMP(3),
     "userId" INTEGER NOT NULL,
@@ -161,6 +166,17 @@ CREATE TABLE "Application" (
 );
 
 -- CreateTable
+CREATE TABLE "Prestation" (
+    "id" SERIAL NOT NULL,
+    "type" TEXT NOT NULL,
+    "tech" TEXT NOT NULL,
+    "level" TEXT NOT NULL,
+    "userId" INTEGER NOT NULL,
+
+    CONSTRAINT "Prestation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Domain" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
@@ -189,6 +205,9 @@ CREATE UNIQUE INDEX "Address_profileId_key" ON "Address"("profileId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_emailConfirmationToken_key" ON "User"("emailConfirmationToken");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Document_userId_key" ON "Document"("userId");
@@ -243,6 +262,9 @@ ALTER TABLE "Application" ADD CONSTRAINT "Application_domainId_fkey" FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE "Application" ADD CONSTRAINT "Application_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Prestation" ADD CONSTRAINT "Prestation_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_DomainToExperience" ADD CONSTRAINT "_DomainToExperience_A_fkey" FOREIGN KEY ("A") REFERENCES "Domain"("id") ON DELETE CASCADE ON UPDATE CASCADE;

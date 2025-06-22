@@ -33,7 +33,6 @@ router.post(
       const experiencesData = JSON.parse(req.body.experiences)
       const prestationsData = JSON.parse(req.body.prestations)
 
-      // availableDate optionnel
       const { availableDate, ...restProfile } = profileData
       const availableDateParsed = availableDate ? new Date(availableDate) : undefined
 
@@ -76,7 +75,6 @@ router.post(
         })
       }
 
-      // Prestations
       await prisma.prestation.deleteMany({ where: { userId } })
       for (const p of prestationsData) {
         await prisma.prestation.create({
@@ -90,48 +88,45 @@ router.post(
       }
 
       if (req.body.removePhoto === 'true') {
-  const photoDoc = await prisma.document.findFirst({ where: { userId, type: 'ID_PHOTO' } })
-  if (photoDoc) {
-    fs.unlinkSync(path.join(uploadDir, photoDoc.fileName))
-    await prisma.document.delete({ where: { id: photoDoc.id } })
-  }
-}
+        const photoDoc = await prisma.document.findFirst({ where: { userId, type: 'ID_PHOTO' } })
+        if (photoDoc) {
+          fs.unlinkSync(path.join(uploadDir, photoDoc.fileName))
+          await prisma.document.delete({ where: { id: photoDoc.id } })
+        }
+      }
 
-if (req.body.removeCV === 'true') {
-  const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'CV' } })
-  if (cvDoc) {
-    fs.unlinkSync(path.join(uploadDir, cvDoc.fileName))
-    await prisma.document.delete({ where: { id: cvDoc.id } })
-  }
-}
-
+      if (req.body.removeCV === 'true') {
+        const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'CV' } })
+        if (cvDoc) {
+          fs.unlinkSync(path.join(uploadDir, cvDoc.fileName))
+          await prisma.document.delete({ where: { id: cvDoc.id } })
+        }
+      }
 
       const photoFile = req.files?.photo?.[0]
       const cvFile    = req.files?.cv?.[0]
 
-if (photoFile) {
-  await prisma.document.create({
-    data: {
-      userId,
-      type: 'ID_PHOTO',
-      fileName: photoFile.filename,
-      originalName: photoFile.originalname
-    }
-  })
-}
+      if (photoFile) {
+        await prisma.document.create({
+          data: {
+            userId,
+            type: 'ID_PHOTO',
+            fileName: photoFile.filename,
+            originalName: photoFile.originalname
+          }
+        })
+      }
 
-if (cvFile) {
-  await prisma.document.create({
-    data: {
-      userId,
-      type: 'CV',
-      fileName: cvFile.filename,
-      originalName: cvFile.originalname
-    }
-  })
-}
-
-
+      if (cvFile) {
+        await prisma.document.create({
+          data: {
+            userId,
+            type: 'CV',
+            fileName: cvFile.filename,
+            originalName: cvFile.originalname
+          }
+        })
+      }
 
       res.status(200).json({ success: true })
     } catch (err) {
@@ -144,6 +139,7 @@ if (cvFile) {
 router.get('/profil', async (req, res) => {
   try {
     const userId = req.user.id
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -153,41 +149,15 @@ router.get('/profil', async (req, res) => {
     })
 
     const experiences = await prisma.experience.findMany({ where: { userId } })
-    const prestations = await prisma.prestation.findMany({ where: { userId } })
-
     const documents = await prisma.document.findMany({
       where: { userId },
       select: {
         id: true,
-        type: true,
         fileName: true,
-        originalName: true
+        originalName: true,
+        type: true
       }
     })
-
-    res.json({
-      isAdmin: user.isAdmin,
-      profile: user.Profile,
-      experiences,
-      documents,
-      prestations
-    })
-  } catch (err) {
-    console.error('Erreur GET /profil', err)
-    res.status(500).json({ error: 'Erreur serveur' })
-  }
-})
-
-    const experiences = await prisma.experience.findMany({ where: { userId } })
-const documents = await prisma.document.findMany({
-  where: { userId },
-  select: {
-    id: true,
-    fileName: true,
-    originalName: true,
-    type: true
-  }
-})
     const prestations = await prisma.prestation.findMany({ where: { userId } })
 
     res.json({

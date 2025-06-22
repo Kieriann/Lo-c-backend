@@ -17,7 +17,7 @@ app.get('/healthz', (_req, res) => {
 
 // ─── CORS ────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: (origin, cb) => cb(null, true),
+  origin: 'https://freesbiz.fr',
   credentials: true,
 }))
 

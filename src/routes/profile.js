@@ -152,18 +152,31 @@ router.get('/profil', async (req, res) => {
       }
     })
 
-router.get('/me', async (req, res) => {
-  try {
-    const userId = req.user.id
-    const documents = await prisma.document.findMany({ where: { userId } })
-    res.json(documents)
+    const experiences = await prisma.experience.findMany({ where: { userId } })
+    const prestations = await prisma.prestation.findMany({ where: { userId } })
+
+    const documents = await prisma.document.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        type: true,
+        fileName: true,
+        originalName: true
+      }
+    })
+
+    res.json({
+      isAdmin: user.isAdmin,
+      profile: user.Profile,
+      experiences,
+      documents,
+      prestations
+    })
   } catch (err) {
-    console.error('Erreur GET /api/documents/me', err)
+    console.error('Erreur GET /profil', err)
     res.status(500).json({ error: 'Erreur serveur' })
   }
 })
-
-
 
     const experiences = await prisma.experience.findMany({ where: { userId } })
 const documents = await prisma.document.findMany({

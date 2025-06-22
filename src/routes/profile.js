@@ -110,37 +110,27 @@ if (req.body.removeCV === 'true') {
       const cvFile    = req.files?.cv?.[0]
 
 if (photoFile) {
-  await prisma.document.upsert({
-    where: { userId },
-    update: {
+  await prisma.document.create({
+    data: {
+      userId,
       type: 'ID_PHOTO',
       fileName: photoFile.filename,
       originalName: photoFile.originalname
+    }
+  })
+}
 
-    },
-    create: {
-      userId,
-      type: 'ID_PHOTO',
-      fileName: photoFile.filename,
-      originalName: photoFile.originalname    }
-  })
-}
 if (cvFile) {
-  await prisma.document.upsert({
-    where: { userId },
-    update: {
-      type: 'CV',
-      fileName: cvFile.filename,
-      originalName: cvFile.originalname
-        },
-    create: {
+  await prisma.document.create({
+    data: {
       userId,
       type: 'CV',
       fileName: cvFile.filename,
       originalName: cvFile.originalname
-        }
+    }
   })
 }
+
 
 
       res.status(200).json({ success: true })

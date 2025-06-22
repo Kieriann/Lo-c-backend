@@ -166,7 +166,15 @@ router.get('/me', async (req, res) => {
 
 
     const experiences = await prisma.experience.findMany({ where: { userId } })
-    const documents   = await prisma.document.findMany({ where: { userId } })
+const documents = await prisma.document.findMany({
+  where: { userId },
+  select: {
+    id: true,
+    fileName: true,
+    originalName: true,
+    type: true
+  }
+})
     const prestations = await prisma.prestation.findMany({ where: { userId } })
 
     res.json({

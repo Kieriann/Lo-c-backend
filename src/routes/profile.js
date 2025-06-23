@@ -60,7 +60,7 @@ router.post(
       const realFiles = req.files?.realFiles || []
       for (let i = 0; i < experiencesData.length; i++) {
         const exp = experiencesData[i]
-const file = realFiles.find(f => f.originalname === exp.realFile?.name)
+const file = realFiles[i]
 const buffer = file?.buffer
         let cloudinaryResult = null
 

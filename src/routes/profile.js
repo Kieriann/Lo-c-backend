@@ -69,7 +69,7 @@ router.post(
             languages: Array.isArray(exp.languages) ? exp.languages : [],
             realTitle: exp.realTitle || '',
             realDescription: exp.realDescription || '',
-            realFilePath: exp.realFilePath || '',
+realFilePath: realFiles[i]?.filename || exp.realFilePath || '',
             userId
           }
         })

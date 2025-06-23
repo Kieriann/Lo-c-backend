@@ -1,22 +1,21 @@
 const express = require('express')
 const router = express.Router()
 const multer = require('multer')
-const fs = require('fs')
-const path = require('path')
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 const authenticateToken = require('../middlewares/authMiddleware')
+const { v2: cloudinary } = require('cloudinary')
+const streamifier = require('streamifier')
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+})
 
 router.use(authenticateToken)
 
-const uploadDir = path.join(__dirname, '../../uploads')
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => cb(null, file.originalname)
-})
-const upload = multer({ storage })
+const upload = multer({ storage: multer.memoryStorage() })
 
 router.post(
   '/profil',
@@ -56,9 +55,26 @@ router.post(
       })
 
       await prisma.experience.deleteMany({ where: { userId } })
+
       const realFiles = req.files?.realFiles || []
       for (let i = 0; i < experiencesData.length; i++) {
         const exp = experiencesData[i]
+        const buffer = realFiles[i]?.buffer
+        let cloudinaryResult = null
+
+        if (buffer) {
+          cloudinaryResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+              { folder: 'realisations' },
+              (err, result) => {
+                if (err) reject(err)
+                else resolve(result)
+              }
+            )
+            streamifier.createReadStream(buffer).pipe(stream)
+          })
+        }
+
         await prisma.experience.create({
           data: {
             title: exp.title,
@@ -69,7 +85,7 @@ router.post(
             languages: Array.isArray(exp.languages) ? exp.languages : [],
             realTitle: exp.realTitle || '',
             realDescription: exp.realDescription || '',
-realFilePath: realFiles[i]?.filename || exp.realFilePath || '',
+            realFilePath: cloudinaryResult?.public_id || exp.realFilePath || '',
             userId
           }
         })
@@ -90,8 +106,7 @@ realFilePath: realFiles[i]?.filename || exp.realFilePath || '',
       if (req.body.removePhoto === 'true') {
         const photoDoc = await prisma.document.findFirst({ where: { userId, type: 'ID_PHOTO' } })
         if (photoDoc) {
-const fullPath = path.join(uploadDir, decodeURIComponent(photoDoc.fileName))
-if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath)
+          await cloudinary.uploader.destroy(photoDoc.fileName)
           await prisma.document.delete({ where: { id: photoDoc.id } })
         }
       }
@@ -99,8 +114,7 @@ if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath)
       if (req.body.removeCV === 'true') {
         const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'CV' } })
         if (cvDoc) {
-const fullPath = path.join(uploadDir, decodeURIComponent(cvDoc.fileName))
-if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath)
+          await cloudinary.uploader.destroy(cvDoc.fileName, { resource_type: 'raw' })
           await prisma.document.delete({ where: { id: cvDoc.id } })
         }
       }
@@ -109,22 +123,44 @@ if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath)
       const cvFile    = req.files?.cv?.[0]
 
       if (photoFile) {
+        const result = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'photos' },
+            (err, result) => {
+              if (err) reject(err)
+              else resolve(result)
+            }
+          )
+          streamifier.createReadStream(photoFile.buffer).pipe(stream)
+        })
+
         await prisma.document.create({
           data: {
             userId,
             type: 'ID_PHOTO',
-            fileName: photoFile.filename,
+            fileName: result.public_id,
             originalName: photoFile.originalname
           }
         })
       }
 
       if (cvFile) {
+        const result = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'cv', resource_type: 'raw' },
+            (err, result) => {
+              if (err) reject(err)
+              else resolve(result)
+            }
+          )
+          streamifier.createReadStream(cvFile.buffer).pipe(stream)
+        })
+
         await prisma.document.create({
           data: {
             userId,
             type: 'CV',
-            fileName: cvFile.filename,
+            fileName: result.public_id,
             originalName: cvFile.originalname
           }
         })

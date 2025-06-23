@@ -23,7 +23,6 @@ app.use(cors({
 
 // ─── Middlewares globaux ─────────────────────────────────────────────
 app.use(express.json())
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 // ─── Import des routes ───────────────────────────────────────────────
 const authRoutes    = require('./src/routes/authRoutes.js')

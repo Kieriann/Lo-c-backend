@@ -67,7 +67,7 @@ const buffer = file?.buffer
         if (buffer) {
           cloudinaryResult = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
-  { folder: 'realisations', resource_type: 'auto' },
+            { folder: 'realisations', resource_type: 'auto' },
 
               (err, result) => {
                 if (err) reject(err)

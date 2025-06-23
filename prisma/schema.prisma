@@ -39,6 +39,7 @@ model User {
   CustomersReferences CustomerReference[]
   Prestations         Prestation[]
   Experiences         Experience[]
+  realisations        Realisation[]
   Trainings           Training[]
   Diplomas            Diploma[]
   Applications        Application[]
@@ -135,22 +136,30 @@ model CustomerReference {
 //
 
 model Experience {
-  id              Int      @id @default(autoincrement())
-  title           String
-  description     String
-  client          String?
-  domains         String?
-  skills          Json
-  languages       Json
-  realTitle       String?
-  realDescription String?
-  realFilePath    String?
-  Domains         Domain[]
-  User            User     @relation(fields: [userId], references: [id])
-  userId          Int
-  updatedAt       DateTime @updatedAt
-  createdAt       DateTime @default(now())
+  id            Int      @id @default(autoincrement())
+  title         String
+  client        String
+  description   String
+  domains       String
+  languages     String[]
+  skills        String
+  userId        Int
+  User          User     @relation(fields: [userId], references: [id])
+  domainsList   Domain[]
+
 }
+
+model Realisation {
+  id               Int      @id @default(autoincrement())
+  title            String
+  description      String
+  techs            String[]
+  fileName         String
+  originalName     String
+  userId           Int
+  User             User     @relation(fields: [userId], references: [id])
+}
+
 
 //
 // ─── FORMATIONS ET COMPÉTENCES ─────────────────────────────────────
@@ -217,7 +226,7 @@ model Prestation {
 model Domain {
   id          Int           @id @default(autoincrement())
   name        String        @unique
-  Experience  Experience[]
+  experiences   Experience[]
   Training    Training[]
   Diploma     Diploma[]
   Application Application[]

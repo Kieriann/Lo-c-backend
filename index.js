@@ -29,6 +29,7 @@ const authRoutes    = require('./src/routes/authRoutes.js')
 const profileRoutes = require('./src/routes/profile.js')
 const adminRoutes   = require('./src/routes/admin')
 const documentRoutes = require('./src/routes/documentRoutes')
+const realisationRoutes = require('./src/routes/realisation')
 
 
 // ─── Routes API ──────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ app.use('/api/auth',    authRoutes)
 app.use('/api/profile', profileRoutes)
 app.use('/api/admin',   adminRoutes)
 app.use('/api/documents', documentRoutes)
+app.use('/api/realisations', realisationRoutes)
 
 
 // ─── Routes de test/debug ───────────────────────────────────────────

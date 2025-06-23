@@ -17,6 +17,10 @@ cloudinary.config({
 router.use(authenticateToken)
 
 const upload = multer({ storage: multer.memoryStorage() })
+function sanitizeFileName(name) {
+  return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_')
+}
+
 
 router.post(
   '/profil',
@@ -88,7 +92,9 @@ const buffer = file?.buffer
             languages: Array.isArray(exp.languages) ? exp.languages : [],
             realTitle: exp.realTitle || '',
             realDescription: exp.realDescription || '',
-            realFilePath: cloudinaryResult?.public_id || exp.realFilePath || '',
+realFilePath: cloudinaryResult
+  ? sanitizeFileName(cloudinaryResult.public_id) + '.' + (exp.realFile?.name?.split('.').pop() || 'pdf')
+  : exp.realFilePath || '',
             userId
           }
         })

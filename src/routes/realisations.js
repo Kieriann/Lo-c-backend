@@ -52,9 +52,8 @@ router.post('/', upload.array('realFiles'), async (req, res) => {
           title: r.realTitle,
           description: r.realDescription,
           techs: r.realTech,
-          fileName: cloudResult
-            ? sanitizeFileName(cloudResult.public_id) + '.' + (r.realFile?.name?.split('.').pop() || 'pdf')
-            : '',
+          fileName: cloudResult ? cloudResult.public_id : '',
+
           originalName: r.realFile?.name || '',
           userId
         }

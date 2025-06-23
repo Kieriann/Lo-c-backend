@@ -60,14 +60,14 @@ router.post(
       const realFiles = req.files?.realFiles || []
       for (let i = 0; i < experiencesData.length; i++) {
         const exp = experiencesData[i]
-const file = realFiles[i]
+const file = realFiles.find(f => f.originalname === exp.realFile?.name)
 const buffer = file?.buffer
         let cloudinaryResult = null
 
         if (buffer) {
           cloudinaryResult = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
-            { folder: 'realisations', resource_type: 'auto' },
+            { folder: 'realisations', resource_type: 'raw' },
 
               (err, result) => {
                 if (err) reject(err)

@@ -82,22 +82,18 @@ const buffer = file?.buffer
           })
         }
 
-        await prisma.experience.create({
-          data: {
-            title: exp.title,
-            client: exp.client || '',
-            description: exp.description,
-            domains: exp.domains || '',
-            skills: JSON.stringify(exp.skills || []),
-            languages: Array.isArray(exp.languages) ? exp.languages : [],
-            realTitle: exp.realTitle || '',
-            realDescription: exp.realDescription || '',
-realFilePath: cloudinaryResult
-  ? sanitizeFileName(cloudinaryResult.public_id) + '.' + (exp.realFile?.name?.split('.').pop() || 'pdf')
-  : exp.realFilePath || '',
-            userId
-          }
-        })
+await prisma.experience.create({
+  data: {
+    title: exp.title,
+    client: exp.client || '',
+    description: exp.description,
+    domains: exp.domains || '',
+    skills: JSON.stringify(exp.skills || []),
+    languages: Array.isArray(exp.languages) ? exp.languages : [],
+    userId
+  }
+})
+
       }
 
       await prisma.prestation.deleteMany({ where: { userId } })

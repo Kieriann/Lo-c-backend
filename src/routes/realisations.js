@@ -53,7 +53,7 @@ const file = files[i]
           title: r.realTitle,
           description: r.realDescription,
           techs: r.realTech,
-fileName: cloudResult?.public_id + '.' + (cloudResult?.format || 'pdf'),
+fileName: cloudResult?.public_id,
 
           originalName: r.realFile?.name || '',
           userId

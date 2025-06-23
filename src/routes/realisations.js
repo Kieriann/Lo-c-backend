@@ -45,6 +45,7 @@ router.post('/', upload.array('realFiles'), async (req, res) => {
           )
           streamifier.createReadStream(buffer).pipe(stream)
         })
+        console.log('cloudResult:', cloudResult)
       }
 
       await prisma.realisation.create({
@@ -52,7 +53,7 @@ router.post('/', upload.array('realFiles'), async (req, res) => {
           title: r.realTitle,
           description: r.realDescription,
           techs: r.realTech,
-          fileName: cloudResult ? cloudResult.public_id : '',
+fileName: cloudResult?.public_id + '.' + (r.realFile?.name?.split('.').pop() || 'pdf'),
 
           originalName: r.realFile?.name || '',
           userId

@@ -90,7 +90,8 @@ router.post(
       if (req.body.removePhoto === 'true') {
         const photoDoc = await prisma.document.findFirst({ where: { userId, type: 'ID_PHOTO' } })
         if (photoDoc) {
-          fs.unlinkSync(path.join(uploadDir, photoDoc.fileName))
+const fullPath = path.join(uploadDir, decodeURIComponent(photoDoc.fileName))
+if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath)
           await prisma.document.delete({ where: { id: photoDoc.id } })
         }
       }
@@ -98,7 +99,8 @@ router.post(
       if (req.body.removeCV === 'true') {
         const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'CV' } })
         if (cvDoc) {
-          fs.unlinkSync(path.join(uploadDir, cvDoc.fileName))
+const fullPath = path.join(uploadDir, decodeURIComponent(cvDoc.fileName))
+if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath)
           await prisma.document.delete({ where: { id: cvDoc.id } })
         }
       }

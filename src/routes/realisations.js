@@ -30,7 +30,7 @@ router.post('/', upload.array('realFiles'), async (req, res) => {
 
     for (let i = 0; i < data.length; i++) {
       const r = data[i]
-      const file = files.find(f => f.originalname === r.realFile?.name)
+const file = files[i] 
       const buffer = file?.buffer
       let cloudResult = null
 

@@ -9,9 +9,10 @@ const streamifier = require('streamifier')
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
+  api_key:    process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 })
+
 
 router.use(authenticateToken)
 
@@ -59,7 +60,8 @@ router.post(
       const realFiles = req.files?.realFiles || []
       for (let i = 0; i < experiencesData.length; i++) {
         const exp = experiencesData[i]
-        const buffer = realFiles[i]?.buffer
+const file = realFiles.find(f => f.originalname === exp.realFile?.name)
+const buffer = file?.buffer
         let cloudinaryResult = null
 
         if (buffer) {

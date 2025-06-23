@@ -202,13 +202,16 @@ router.get('/profil', async (req, res) => {
       }
     })
     const prestations = await prisma.prestation.findMany({ where: { userId } })
+    const realisations = await prisma.realisation.findMany({ where: { userId } })
+
 
     res.json({
       isAdmin: user.isAdmin,
       profile: user.Profile,
       experiences,
       documents,
-      prestations
+      prestations,
+      realisations
     })
   } catch (err) {
     console.error('Erreur GET /profil', err)

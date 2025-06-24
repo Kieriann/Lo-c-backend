@@ -140,6 +140,10 @@ const result = await uploadImage(photoFile.buffer, cleanName)
   })
 }
 
+await prisma.document.deleteMany({
+  where: { userId, type: 'CV' }
+})
+
 
       if (cvFile && cvFile.buffer) {
   console.log("cvFile:", cvFile.originalname, cvFile.mimetype, cvFile.buffer.length)

@@ -26,7 +26,7 @@ app.use(express.json())
 
 // ─── Import des routes ───────────────────────────────────────────────
 const authRoutes    = require('./src/routes/authRoutes.js')
-app.use('/api/forgot-password', require('./routes/forgotPassword'))
+const forgotPasswordRoutes = require('./src/routes/forgotPassword')
 const profileRoutes = require('./src/routes/profile.js')
 const adminRoutes   = require('./src/routes/admin')
 const documentRoutes = require('./src/routes/documentRoutes')
@@ -39,6 +39,7 @@ app.use('/api/profile', profileRoutes)
 app.use('/api/admin',   adminRoutes)
 app.use('/api/documents', documentRoutes)
 app.use('/api/realisations', realisationRoutes)
+app.use('/api/forgot-password', forgotPasswordRoutes)
 
 
 // ─── Routes de test/debug ───────────────────────────────────────────

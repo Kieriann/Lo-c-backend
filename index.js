@@ -31,6 +31,7 @@ const profileRoutes = require('./src/routes/profile.js')
 const adminRoutes   = require('./src/routes/admin')
 const documentRoutes = require('./src/routes/documentRoutes')
 const realisationRoutes = require('./src/routes/realisations')
+const resetPasswordRoutes = require('./src/routes/resetPassword')
 
 
 // ─── Routes API ──────────────────────────────────────────────────────
@@ -40,6 +41,7 @@ app.use('/api/admin',   adminRoutes)
 app.use('/api/documents', documentRoutes)
 app.use('/api/realisations', realisationRoutes)
 app.use('/api/forgot-password', forgotPasswordRoutes)
+app.use('/api/reset-password', resetPasswordRoutes)
 
 
 // ─── Routes de test/debug ───────────────────────────────────────────

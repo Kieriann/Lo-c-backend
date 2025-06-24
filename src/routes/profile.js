@@ -121,8 +121,8 @@ if (file && file.buffer) {
 
       if (photoFile && photoFile.buffer) {
   console.log("photoFile:", photoFile.originalname, photoFile.mimetype, photoFile.buffer.length)
-  const cleanName = sanitizeFileName(photoFile.originalname)
-  const result = await uploadImage(photoFile.buffer, cleanName)
+const cleanName = sanitizeFileName(photoFile.originalname).replace(/\.[^/.]+$/, '')
+const result = await uploadImage(photoFile.buffer, cleanName)
   const photoFileName = `v${result.version}/${result.public_id}`
 
   await prisma.document.create({

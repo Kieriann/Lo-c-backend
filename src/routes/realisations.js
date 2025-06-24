@@ -73,7 +73,7 @@ router.post('/', upload.array('realFiles'), async (req, res) => {
             version: String(result.version),
             public_id: result.public_id,
             format: result.format || 'pdf',
-            originalName: f.originalname
+originalName: f.originalname.replace(/\s+/g, '_'),
           }
         })
       }
@@ -106,7 +106,7 @@ const realisations = rawRealisations.map(r => ({
     public_id: f.public_id,
     version: f.version,
     format: f.format,
-    originalName: f.originalName,
+originalName: f.originalname.replace(/\s+/g, '_'),
     resourceType: f.resourceType
   }))
 }))

@@ -68,21 +68,22 @@ router.post(
         })
         
         const file = realFiles.find(f => f.originalname === exp.realFile?.name)
-        if (file && file.buffer) {
-          console.log("realFile:", file.originalname, file.mimetype, file.buffer.length)
-          const result = await uploadDocument(file.buffer, file.originalname)
-          
-          // Enregistre les détails Cloudinary dans la base de données
-          await prisma.experienceFile.create({
-            data: {
-              experienceId: experience.id,
-              public_id: result.public_id,
-              version: result.version,
-              format: result.format || file.originalname.split('.').pop().toLowerCase(),
-              originalName: file.originalname
-            }
-          })
-        }
+if (file && file.buffer) {
+  console.log("realFile:", file.originalname, file.mimetype, file.buffer.length)
+  const cleanName = sanitizeFileName(file.originalname)
+  const result = await uploadDocument(file.buffer, cleanName)
+
+  await prisma.experienceFile.create({
+    data: {
+      experienceId: experience.id,
+      public_id: result.public_id,
+      version: result.version,
+      format: result.format || cleanName.split('.').pop().toLowerCase(),
+      originalName: cleanName
+    }
+  })
+}
+
       }
 
       await prisma.prestation.deleteMany({ where: { userId } })
@@ -119,38 +120,41 @@ router.post(
       const cvFile    = req.files?.cv?.[0]
 
       if (photoFile && photoFile.buffer) {
-        console.log("photoFile:", photoFile.originalname, photoFile.mimetype, photoFile.buffer.length)
-        const result = await uploadImage(photoFile.buffer, photoFile.originalname)
-        const photoFileName = `v${result.version}/${result.public_id}`
+  console.log("photoFile:", photoFile.originalname, photoFile.mimetype, photoFile.buffer.length)
+  const cleanName = sanitizeFileName(photoFile.originalname)
+  const result = await uploadImage(photoFile.buffer, cleanName)
+  const photoFileName = `v${result.version}/${result.public_id}`
 
-        await prisma.document.create({
-          data: {
-            userId,
-            type: 'ID_PHOTO',
-            fileName: photoFileName,
-            originalName: photoFile.originalname
-          }
-        })
-      }
+  await prisma.document.create({
+    data: {
+      userId,
+      type: 'ID_PHOTO',
+      fileName: photoFileName,
+      originalName: cleanName
+    }
+  })
+}
+
 
       if (cvFile && cvFile.buffer) {
-        console.log("cvFile:", cvFile.originalname, cvFile.mimetype, cvFile.buffer.length)
-        const result = await uploadDocument(cvFile.buffer, cvFile.originalname)
-        
-        // Utilise le format retourné par Cloudinary ou l'extension du fichier original
-        const format = result.format || cvFile.originalname.split('.').pop().toLowerCase()
-        const cvFileName = `v${result.version}/${result.public_id}.${format}`
+  console.log("cvFile:", cvFile.originalname, cvFile.mimetype, cvFile.buffer.length)
+  const cleanName = sanitizeFileName(cvFile.originalname)
+  const result = await uploadDocument(cvFile.buffer, cleanName)
 
-        await prisma.document.create({
-          data: {
-            userId,
-            type: 'CV',
-            fileName: cvFileName,
-            originalName: cvFile.originalname,
-            format: format  // Stocke aussi le format
-          }
-        })
-      }
+  const format = result.format || cvFile.originalname.split('.').pop().toLowerCase()
+  const cvFileName = `v${result.version}/${result.public_id}.${format}`
+
+  await prisma.document.create({
+    data: {
+      userId,
+      type: 'CV',
+      fileName: cvFileName,
+      originalName: cleanName,
+      format: format
+    }
+  })
+}
+
 
       res.status(200).json({ success: true })
     } catch (err) {
@@ -203,7 +207,8 @@ const documents = await prisma.document.findMany({
           version: f.version,
           public_id: f.public_id,
           format: f.format,
-          originalName: f.originalName
+          originalName: f.originalname.replace(/\s+/g, '_'),
+
         }))
       }))
     })

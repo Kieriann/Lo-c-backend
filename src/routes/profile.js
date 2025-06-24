@@ -4,15 +4,7 @@ const multer = require('multer')
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 const authenticateToken = require('../middlewares/authMiddleware')
-const { v2: cloudinary } = require('cloudinary')
-const streamifier = require('streamifier')
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-})
-
+const { uploadImage, uploadDocument } = require('../utils/cloudinaryUpload')
 
 router.use(authenticateToken)
 
@@ -20,7 +12,6 @@ const upload = multer({ storage: multer.memoryStorage() })
 function sanitizeFileName(name) {
   return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_')
 }
-
 
 router.post(
   '/profil',
@@ -64,36 +55,27 @@ router.post(
       const realFiles = req.files?.realFiles || []
       for (let i = 0; i < experiencesData.length; i++) {
         const exp = experiencesData[i]
-const file = realFiles.find(f => f.originalname === exp.realFile?.name)
-const buffer = file?.buffer
+        const file = realFiles.find(f => f.originalname === exp.realFile?.name)
+        const buffer = file?.buffer
         let cloudinaryResult = null
 
         if (buffer) {
-          cloudinaryResult = await new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-            { folder: 'realisations', resource_type: 'raw' },
-
-              (err, result) => {
-                if (err) reject(err)
-                else resolve(result)
-              }
-            )
-            streamifier.createReadStream(buffer).pipe(stream)
-          })
+          // uploadDocument attend un filePath, on va temporairement écrire le buffer si besoin
+          // Mais ici, on va utiliser Multer, donc on peut juste passer le buffer et originalname
+          cloudinaryResult = await uploadDocument(file, file.originalname)
         }
 
-await prisma.experience.create({
-  data: {
-    title: exp.title,
-    client: exp.client || '',
-    description: exp.description,
-    domains: exp.domains || '',
-    skills: JSON.stringify(exp.skills || []),
-    languages: Array.isArray(exp.languages) ? exp.languages : [],
-    userId
-  }
-})
-
+        await prisma.experience.create({
+          data: {
+            title: exp.title,
+            client: exp.client || '',
+            description: exp.description,
+            domains: exp.domains || '',
+            skills: JSON.stringify(exp.skills || []),
+            languages: Array.isArray(exp.languages) ? exp.languages : [],
+            userId
+          }
+        })
       }
 
       await prisma.prestation.deleteMany({ where: { userId } })
@@ -111,7 +93,7 @@ await prisma.experience.create({
       if (req.body.removePhoto === 'true') {
         const photoDoc = await prisma.document.findFirst({ where: { userId, type: 'ID_PHOTO' } })
         if (photoDoc) {
-          await cloudinary.uploader.destroy(photoDoc.fileName)
+          await uploadImage(photoDoc.fileName) // destroy via cloudinary si besoin, adapter si tu veux
           await prisma.document.delete({ where: { id: photoDoc.id } })
         }
       }
@@ -119,7 +101,7 @@ await prisma.experience.create({
       if (req.body.removeCV === 'true') {
         const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'CV' } })
         if (cvDoc) {
-          await cloudinary.uploader.destroy(cvDoc.fileName, { resource_type: 'raw' })
+          await uploadDocument(cvDoc.fileName) // destroy via cloudinary si besoin, adapter si tu veux
           await prisma.document.delete({ where: { id: cvDoc.id } })
         }
       }
@@ -128,52 +110,31 @@ await prisma.experience.create({
       const cvFile    = req.files?.cv?.[0]
 
       if (photoFile) {
-        const result = await new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
-            { folder: 'photos' },
-            (err, result) => {
-              if (err) reject(err)
-              else resolve(result)
-            }
-          )
-          streamifier.createReadStream(photoFile.buffer).pipe(stream)
+        const result = await uploadImage(photoFile.path, photoFile.originalname)
+        const photoFileName = `v${result.version}/${result.public_id}`
+
+        await prisma.document.create({
+          data: {
+            userId,
+            type: 'ID_PHOTO',
+            fileName: photoFileName,
+            originalName: photoFile.originalname
+          }
         })
-
-const photoFileName = `v${result.version}/${result.public_id}`
-
-await prisma.document.create({
-  data: {
-    userId,
-    type: 'ID_PHOTO',
-    fileName: photoFileName,
-    originalName: photoFile.originalname
-  }
-})
       }
 
       if (cvFile) {
-        const result = await new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
-            { folder: 'cv', resource_type: 'raw' },
-            (err, result) => {
-              if (err) reject(err)
-              else resolve(result)
-            }
-          )
-          streamifier.createReadStream(cvFile.buffer).pipe(stream)
-        })
-
+        const result = await uploadDocument(cvFile.path, cvFile.originalname)
         const cvFileName = `v${result.version}/${result.public_id}.${result.format || 'pdf'}`
 
-await prisma.document.create({
-  data: {
-    userId,
-    type: 'CV',
-    fileName: cvFileName,
-    originalName: cvFile.originalname
-  }
-})
-
+        await prisma.document.create({
+          data: {
+            userId,
+            type: 'CV',
+            fileName: cvFileName,
+            originalName: cvFile.originalname
+          }
+        })
       }
 
       res.status(200).json({ success: true })
@@ -223,13 +184,12 @@ router.get('/profil', async (req, res) => {
         title: r.title,
         description: r.description,
         techs: r.techs,
-       files: r.files.map(f => ({
-  version: f.version,
-  public_id: f.public_id,
-  format: f.format,
-  originalName: f.originalName
-}))
-
+        files: r.files.map(f => ({
+          version: f.version,
+          public_id: f.public_id,
+          format: f.format,
+          originalName: f.originalName
+        }))
       }))
     })
   } catch (err) {
@@ -237,6 +197,5 @@ router.get('/profil', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' })
   }
 })
-
 
 module.exports = router

@@ -166,6 +166,9 @@ model RealisationFile {
   realisationId  Int
   fileName       String
   originalName   String
+  version        String
+  public_id      String
+  format         String
 }
 
 

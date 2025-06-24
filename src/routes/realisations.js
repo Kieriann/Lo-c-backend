@@ -20,70 +20,64 @@ function sanitizeFileName(name) {
   return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_')
 }
 
+// POST /api/realisations
 router.post('/', upload.array('realFiles'), async (req, res) => {
   try {
     const userId = req.user.id
     const data = JSON.parse(req.body.data)
-    const files = req.files || []
-const flatFiles = Array.isArray(files) ? files : [files]
+    const files = Array.isArray(req.files) ? req.files : [req.files].filter(Boolean)
 
-await prisma.realisationFile.deleteMany({
-  where: {
-    realisation: {
-      userId
-    }
-  }
-})
-
-// Puis supprime les réalisations
-await prisma.realisation.deleteMany({
-  where: { userId }
-})
-for (let i = 0; i < data.length; i++) {
-  const r = data[i]
-  const relatedFiles = files.filter(f => f.originalname.startsWith(`real-${i}-`))
-
-const created = await prisma.realisation.create({
-  data: {
-title: r.title,
-description: r.description,
-techs: r.techs,
-
-    userId,
-  }
-})
-
-
-  for (const f of relatedFiles) {
-    const buffer = f.buffer
-    if (!buffer) continue
-
-    const result = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: 'realisations', resource_type: 'raw' },
-        (err, res) => (err ? reject(err) : resolve(res))
-      )
-      streamifier.createReadStream(buffer).pipe(stream)
+    // Supprime tous les fichiers et réalisations précédentes de l'utilisateur
+    await prisma.realisationFile.deleteMany({
+      where: {
+        realisation: {
+          userId
+        }
+      }
+    })
+    await prisma.realisation.deleteMany({
+      where: { userId }
     })
 
-const fullFileName = `v${result.version}/${result.public_id}.${result.format || 'pdf'}`
+    // Parcours des réalisations à créer
+    for (let i = 0; i < data.length; i++) {
+      const r = data[i]
+      const relatedFiles = files.filter(f => f.originalname && f.originalname.startsWith(`real-${i}-`))
 
-await prisma.realisationFile.create({
-  data: {
-    realisationId: created.id,
-    fileName: fullFileName,
-    version: result.version,
-    public_id: result.public_id,
-    format: result.format || 'pdf',
-    originalName: f.originalname
-  }
-})
+      // Création de la réalisation
+      const created = await prisma.realisation.create({
+        data: {
+          title: r.title,
+          description: r.description,
+          techs: r.techs,
+          userId,
+        }
+      })
 
+      // Upload et enregistrement des fichiers associés
+      for (const f of relatedFiles) {
+        if (!f?.buffer) continue
 
+        const result = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'realisations', resource_type: 'raw' },
+            (err, res) => (err ? reject(err) : resolve(res))
+          )
+          streamifier.createReadStream(f.buffer).pipe(stream)
+        })
 
-  }
-}
-
+        await prisma.realisationFile.create({
+          data: {
+            realisationId: created.id,
+            fileName: `v${result.version}/${result.public_id}.${result.format || 'pdf'}`,
+            version: String(result.version),
+            public_id: result.public_id,
+            format: result.format || 'pdf',
+            originalName: f.originalname
+          }
+        })
+      }
+    }
 
     res.status(200).json({ success: true })
   } catch (err) {
@@ -92,21 +86,31 @@ await prisma.realisationFile.create({
   }
 })
 
+// GET /api/realisations
 router.get('/', async (req, res) => {
   try {
     const userId = req.user.id
 
-const rawRealisations = await prisma.realisation.findMany({
-  where: { userId },
-  include: { files: true }
-})
+    const rawRealisations = await prisma.realisation.findMany({
+      where: { userId },
+      include: { files: true }
+    })
 
-
-const realisations = rawRealisations.map(r => ({
-  ...r,
-  files: r.files,
-}))
-
+    // Pour chaque réalisation, bien renvoyer tous les champs nécessaires pour le front
+    const realisations = rawRealisations.map(r => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      techs: r.techs,
+      files: (r.files || []).map(f => ({
+        id: f.id,
+        fileName: f.fileName,
+        version: f.version,
+        public_id: f.public_id,
+        format: f.format,
+        originalName: f.originalName
+      }))
+    }))
 
     res.json(realisations)
   } catch (err) {
@@ -114,6 +118,5 @@ const realisations = rawRealisations.map(r => ({
     res.status(500).json({ error: 'Erreur serveur' })
   }
 })
-
 
 module.exports = router

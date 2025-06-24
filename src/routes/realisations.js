@@ -74,15 +74,23 @@ fileName: result.public_id + '.' + (result.format || 'pdf'),
 router.get('/', async (req, res) => {
   try {
     const userId = req.user.id
-const realisations = await prisma.realisation.findMany({
-  where: { userId },
-  include: { files: true }
-})
+
+    const rawRealisations = await prisma.realisation.findMany({
+      where: { userId },
+      include: { files: true }
+    })
+
+    const realisations = rawRealisations.map(r => ({
+      ...r,
+      realFiles: r.files,
+    }))
+
     res.json(realisations)
   } catch (err) {
     console.error('Erreur GET /realisations', err)
     res.status(500).json({ error: 'Erreur serveur' })
   }
 })
+
 
 module.exports = router

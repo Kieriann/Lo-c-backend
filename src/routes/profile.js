@@ -138,7 +138,7 @@ const result = await uploadImage(photoFile.buffer, cleanName)
 
       if (cvFile && cvFile.buffer) {
   console.log("cvFile:", cvFile.originalname, cvFile.mimetype, cvFile.buffer.length)
-  const cleanName = sanitizeFileName(cvFile.originalname)
+const cleanName = sanitizeFileName(cvFile.originalname).replace(/\.[^/.]+$/, '')
   const result = await uploadDocument(cvFile.buffer, cleanName)
 
   const format = result.format || cvFile.originalname.split('.').pop().toLowerCase()

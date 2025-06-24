@@ -25,6 +25,7 @@ router.post('/', upload.array('realFiles'), async (req, res) => {
     const userId = req.user.id
     const data = JSON.parse(req.body.data)
     const files = req.files || []
+const flatFiles = Array.isArray(files) ? files : [files]
 
     await prisma.realisation.deleteMany({ where: { userId } })
 

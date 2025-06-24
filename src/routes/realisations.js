@@ -27,8 +27,18 @@ router.post('/', upload.array('realFiles'), async (req, res) => {
     const files = req.files || []
 const flatFiles = Array.isArray(files) ? files : [files]
 
-    await prisma.realisation.deleteMany({ where: { userId } })
+await prisma.realisationFile.deleteMany({
+  where: {
+    realisation: {
+      userId
+    }
+  }
+})
 
+// Puis supprime les réalisations
+await prisma.realisation.deleteMany({
+  where: { userId }
+})
 for (let i = 0; i < data.length; i++) {
   const r = data[i]
   const relatedFiles = files.filter(f => f.originalname.startsWith(`real-${i}-`))

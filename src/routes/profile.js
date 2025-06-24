@@ -139,14 +139,16 @@ await prisma.experience.create({
           streamifier.createReadStream(photoFile.buffer).pipe(stream)
         })
 
-        await prisma.document.create({
-          data: {
-            userId,
-            type: 'ID_PHOTO',
-            fileName: result.public_id,
-            originalName: photoFile.originalname
-          }
-        })
+const photoFileName = `v${result.version}/${result.public_id}`
+
+await prisma.document.create({
+  data: {
+    userId,
+    type: 'ID_PHOTO',
+    fileName: photoFileName,
+    originalName: photoFile.originalname
+  }
+})
       }
 
       if (cvFile) {
@@ -161,14 +163,17 @@ await prisma.experience.create({
           streamifier.createReadStream(cvFile.buffer).pipe(stream)
         })
 
-        await prisma.document.create({
-          data: {
-            userId,
-            type: 'CV',
-            fileName: result.public_id,
-            originalName: cvFile.originalname
-          }
-        })
+        const cvFileName = `v${result.version}/${result.public_id}.${result.format || 'pdf'}`
+
+await prisma.document.create({
+  data: {
+    userId,
+    type: 'CV',
+    fileName: cvFileName,
+    originalName: cvFile.originalname
+  }
+})
+
       }
 
       res.status(200).json({ success: true })

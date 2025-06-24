@@ -66,14 +66,16 @@ techs: r.techs,
       streamifier.createReadStream(buffer).pipe(stream)
     })
 
+const fullFileName = `v${result.version}/${result.public_id}.${result.format || 'pdf'}`
+
 await prisma.realisationFile.create({
   data: {
     realisationId: created.id,
-
-    fileName: result.public_id + '.' + (result.format || 'pdf'),
+    fileName: fullFileName,
     originalName: f.originalname
   }
 })
+
 
   }
 }

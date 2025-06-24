@@ -96,23 +96,22 @@ router.get('/', async (req, res) => {
       include: { files: true }
     })
 
-    // Pour chaque réalisation, bien renvoyer tous les champs nécessaires pour le front
-    const realisations = rawRealisations.map(r => ({
-      id: r.id,
-      title: r.title,
-      description: r.description,
-      techs: r.techs,
-      files: (r.files || []).map(f => ({
-        id: f.id,
-        fileName: f.fileName,
-        version: f.version,
-        public_id: f.public_id,
-        format: f.format,
-        originalName: f.originalName
-      }))
-    }))
+const realisations = rawRealisations.map(r => ({
+  id: r.id,
+  title: r.title,
+  description: r.description,
+  techs: r.techs,
+  files: (r.files || []).map(f => ({
+    id: f.id,
+    public_id: f.public_id,
+    version: f.version,
+    format: f.format,
+    originalName: f.originalName,
+    resourceType: f.resourceType
+  }))
+}))
 
-    res.json(realisations)
+res.json(realisations)
   } catch (err) {
     console.error('Erreur GET /realisations', err)
     res.status(500).json({ error: 'Erreur serveur' })

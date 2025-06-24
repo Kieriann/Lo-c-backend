@@ -184,14 +184,20 @@ router.get('/profil', async (req, res) => {
     const userId = req.user.id
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        isAdmin: true,
-        Profile: { include: { Address: true } }
+      where: { id: req.user.id },
+      include: {
+        Profile: { include: { Address: true } },
+        Documents: true,
+        Experiences: true,
+        Prestations: true,
+        realisations: {
+          include: {
+            files: true
+          }
+        }
       }
     })
 
-    const experiences = await prisma.experience.findMany({ where: { userId } })
     const documents = await prisma.document.findMany({
       where: { userId },
       select: {
@@ -201,22 +207,28 @@ router.get('/profil', async (req, res) => {
         type: true
       }
     })
-    const prestations = await prisma.prestation.findMany({ where: { userId } })
-    const realisations = await prisma.realisation.findMany({ where: { userId } })
-
 
     res.json({
       isAdmin: user.isAdmin,
       profile: user.Profile,
-      experiences,
+      experiences: user.Experiences,
       documents,
-      prestations,
-      realisations
+      prestations: user.Prestations,
+      realisations: user.realisations.map(r => ({
+        title: r.title,
+        description: r.description,
+        techs: r.techs,
+        files: r.files.map(f => ({
+          fileName: f.fileName,
+          originalName: f.originalName
+        }))
+      }))
     })
   } catch (err) {
     console.error('Erreur GET /profil', err)
     res.status(500).json({ error: 'Erreur serveur' })
   }
 })
+
 
 module.exports = router

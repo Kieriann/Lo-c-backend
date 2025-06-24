@@ -37,7 +37,6 @@ async function uploadDocument(buffer, originalName) {
     const stream = cloudinary.uploader.upload_stream(
       {
         resource_type: 'auto',
-        folder: 'realisations',
         public_id: originalName.split('.')[0],
         use_filename: true,
         overwrite: true

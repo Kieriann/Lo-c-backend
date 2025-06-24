@@ -79,7 +79,7 @@ router.get('/', async (req, res) => {
 
 const rawRealisations = await prisma.realisation.findMany({
   where: { userId },
-  include: { realisationFiles: true }
+  include: { files: true }
 })
 
 

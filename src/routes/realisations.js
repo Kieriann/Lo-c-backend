@@ -71,6 +71,7 @@ const fullFileName = `v${result.version}/${result.public_id}.${result.format || 
 await prisma.realisationFile.create({
   data: {
     realisationId: created.id,
+    fileName: fullFileName,
     version: result.version,
     public_id: result.public_id,
     format: result.format || 'pdf',

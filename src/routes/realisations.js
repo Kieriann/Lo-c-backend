@@ -38,7 +38,6 @@ const created = await prisma.realisation.create({
     description: r.realDescription,
     techs: r.realTech,
     userId,
-    fileName: relatedFiles[0]?.originalname || 'inconnu'
   }
 })
 

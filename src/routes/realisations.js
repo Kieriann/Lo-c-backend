@@ -34,9 +34,10 @@ for (let i = 0; i < data.length; i++) {
 
 const created = await prisma.realisation.create({
   data: {
-    title: r.realTitle,
-    description: r.realDescription,
-    techs: r.realTech,
+title: r.title,
+description: r.description,
+techs: r.techs,
+
     userId,
   }
 })

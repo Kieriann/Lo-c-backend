@@ -88,6 +88,7 @@ if (file && file.buffer) {
     }
   })
 }
+await prisma.document.delete({ where: { id: 12 } })
 
       }
 

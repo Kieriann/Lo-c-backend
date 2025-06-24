@@ -54,9 +54,10 @@ const created = await prisma.realisation.create({
       streamifier.createReadStream(buffer).pipe(stream)
     })
 
-    await prisma.realisationFile.create({
+await prisma.realisationFile.create({
   data: {
-    realisation: { connect: { id: created.id } },
+    realisationId: created.id,
+
     fileName: result.public_id + '.' + (result.format || 'pdf'),
     originalName: f.originalname
   }
@@ -85,7 +86,7 @@ const rawRealisations = await prisma.realisation.findMany({
 
 const realisations = rawRealisations.map(r => ({
   ...r,
-  files: r.realisationFiles,
+  files: r.files,
 }))
 
 

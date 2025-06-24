@@ -10,8 +10,13 @@ router.use(authenticateToken)
 
 const upload = multer({ storage: multer.memoryStorage() })
 function sanitizeFileName(name) {
-  return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_')
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // accents
+    .replace(/[^a-zA-Z0-9._-]/g, '_') // tout sauf lettres, chiffres, point, tiret, underscore
+    .replace(/\s+/g, '_') // espaces
 }
+
 
 router.post(
   '/profil',

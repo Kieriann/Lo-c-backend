@@ -223,10 +223,13 @@ router.get('/profil', async (req, res) => {
         title: r.title,
         description: r.description,
         techs: r.techs,
-        files: r.files.map(f => ({
-          fileName: f.fileName,
-          originalName: f.originalName
-        }))
+       files: r.files.map(f => ({
+  version: f.version,
+  public_id: f.public_id,
+  format: f.format,
+  originalName: f.originalName
+}))
+
       }))
     })
   } catch (err) {

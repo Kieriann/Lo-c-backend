@@ -179,16 +179,15 @@ router.get('/profil', async (req, res) => {
       }
     })
 
-    const documents = await prisma.document.findMany({
-      where: { userId },
-      select: {
-        id: true,
-        fileName: true,
-        originalName: true,
-        type: true,
-        format: true
-      }
-    })
+const documents = await prisma.document.findMany({
+  where: { userId },
+  select: {
+    id: true,
+    fileName: true,
+    originalName: true,
+    type: true
+  }
+})
 
     res.json({
       isAdmin: user.isAdmin,

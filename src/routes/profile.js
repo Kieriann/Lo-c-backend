@@ -56,19 +56,11 @@ router.post(
       for (let i = 0; i < experiencesData.length; i++) {
         const exp = experiencesData[i]
         const file = realFiles.find(f => f.originalname === exp.realFile?.name)
-        const buffer = file?.buffer
-        let cloudinaryResult = null
-
-
-        if (file) {
-  console.log("realFile:", file.originalname, file.mimetype, file.buffer?.length)
-}
-        if (buffer) {
-          // uploadDocument attend un filePath, on va temporairement écrire le buffer si besoin
-          // Mais ici, on va utiliser Multer, donc on peut juste passer le buffer et originalname
-          cloudinaryResult = await uploadDocument(file.buffer, file.originalname)
+        if (file && file.buffer) {
+          console.log("realFile:", file.originalname, file.mimetype, file.buffer.length)
+          // Upload the file as a raw document to Cloudinary
+          await uploadDocument(file.buffer, file.originalname)
         }
-
         await prisma.experience.create({
           data: {
             title: exp.title,
@@ -97,7 +89,8 @@ router.post(
       if (req.body.removePhoto === 'true') {
         const photoDoc = await prisma.document.findFirst({ where: { userId, type: 'ID_PHOTO' } })
         if (photoDoc) {
-          await uploadImage(photoDoc.fileName) // destroy via cloudinary si besoin, adapter si tu veux
+          // Optionally, destroy on Cloudinary if you wish:
+          // await cloudinary.uploader.destroy(photoDoc.fileName)
           await prisma.document.delete({ where: { id: photoDoc.id } })
         }
       }
@@ -105,17 +98,18 @@ router.post(
       if (req.body.removeCV === 'true') {
         const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'CV' } })
         if (cvDoc) {
-          await uploadDocument(cvDoc.fileName) // destroy via cloudinary si besoin, adapter si tu veux
+          // Optionally, destroy on Cloudinary if you wish:
+          // await cloudinary.uploader.destroy(cvDoc.fileName, { resource_type: 'raw' })
           await prisma.document.delete({ where: { id: cvDoc.id } })
         }
       }
 
       const photoFile = req.files?.photo?.[0]
       const cvFile    = req.files?.cv?.[0]
-if (photoFile) {
-  console.log("photoFile:", photoFile.originalname, photoFile.mimetype, photoFile.buffer?.length)
-      if (photoFile) {
-        const result = await uploadImage(photoFile.path, photoFile.originalname)
+
+      if (photoFile && photoFile.buffer) {
+        console.log("photoFile:", photoFile.originalname, photoFile.mimetype, photoFile.buffer.length)
+        const result = await uploadImage(photoFile.buffer, photoFile.originalname)
         const photoFileName = `v${result.version}/${result.public_id}`
 
         await prisma.document.create({
@@ -128,11 +122,9 @@ if (photoFile) {
         })
       }
 
-      if (cvFile) {
-  console.log("cvFile:", cvFile.originalname, cvFile.mimetype, cvFile.buffer?.length)
-
-      if (cvFile) {
-        const result = await uploadDocument(cvFile.path, cvFile.originalname)
+      if (cvFile && cvFile.buffer) {
+        console.log("cvFile:", cvFile.originalname, cvFile.mimetype, cvFile.buffer.length)
+        const result = await uploadDocument(cvFile.buffer, cvFile.originalname)
         const cvFileName = `v${result.version}/${result.public_id}.${result.format || 'pdf'}`
 
         await prisma.document.create({

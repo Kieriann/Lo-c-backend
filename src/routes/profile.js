@@ -145,10 +145,12 @@ const result = await uploadImage(photoFile.buffer, cleanName)
       if (cvFile && cvFile.buffer) {
   console.log("cvFile:", cvFile.originalname, cvFile.mimetype, cvFile.buffer.length)
 const cleanName = sanitizeFileName(cvFile.originalname).replace(/\.[^/.]+$/, '')
-  const result = await uploadDocument(cvFile.buffer, cleanName)
+const result = await uploadDocument(cvFile.buffer, cleanName)
 
-  const format = result.format || cvFile.originalname.split('.').pop().toLowerCase()
-  const cvFileName = `v${result.version}/${result.public_id}.${format}`
+const format = result.format || cvFile.originalname.split('.').pop().toLowerCase()
+const cleanPublicId = result.public_id.replace(/^realisations\//, '')
+const cvFileName = `v${result.version}/${cleanPublicId}.${format}`
+
 
   console.log('Création CV → fileName:', cvFileName)
 

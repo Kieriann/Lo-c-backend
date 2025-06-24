@@ -1,18 +1,37 @@
 const cloudinary = require('cloudinary').v2
+const streamifier = require('streamifier')
 
-async function uploadDocument(filePath, originalName) {
-  return cloudinary.uploader.upload(filePath, {
-    resource_type: "raw",
-    public_id: `realisations/${originalName}`, // ex: realisations/monfichier.pdf
-    overwrite: true,
+async function uploadDocument(buffer, originalName) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: "raw",
+        public_id: `realisations/${originalName}`, // ex: realisations/monfichier.pdf
+        overwrite: true,
+      },
+      (err, result) => {
+        if (err) reject(err)
+        else resolve(result)
+      }
+    )
+    streamifier.createReadStream(buffer).pipe(stream)
   })
 }
 
-async function uploadImage(filePath, originalName) {
-  return cloudinary.uploader.upload(filePath, {
-    resource_type: "image",
-    public_id: `profil/${originalName}`, // ex: profil/avatar.jpg
-    overwrite: true,
+async function uploadImage(buffer, originalName) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: "image",
+        public_id: `profil/${originalName}`, // ex: profil/avatar.jpg
+        overwrite: true,
+      },
+      (err, result) => {
+        if (err) reject(err)
+        else resolve(result)
+      }
+    )
+    streamifier.createReadStream(buffer).pipe(stream)
   })
 }
 

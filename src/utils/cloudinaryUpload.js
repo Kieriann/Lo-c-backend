@@ -2,20 +2,16 @@
 const cloudinary = require('cloudinary').v2
 const streamifier = require('streamifier')
 
-// Configuration de Cloudinary (assure-toi qu'elle est bien configurée ailleurs)
-// cloudinary.config({ ... }) // Si pas déjà configuré dans ton app
-
+// Upload d'image (photo)
 async function uploadImage(buffer, originalName) {
   return new Promise((resolve, reject) => {
-    if (!buffer) {
-      return reject(new Error('Buffer manquant'))
-    }
-    
+    if (!buffer) return reject(new Error('Buffer manquant'))
+
     const stream = cloudinary.uploader.upload_stream(
       {
-        resource_type: "auto", // Utilise "auto" au lieu de "image"
-        folder: "profil",
-        public_id: originalName.split('.')[0], // Sans extension
+        resource_type: 'image',
+        folder: 'profil',
+        public_id: originalName.split('.')[0],
         overwrite: true
       },
       (error, result) => {
@@ -28,22 +24,21 @@ async function uploadImage(buffer, originalName) {
         }
       }
     )
-    
+
     streamifier.createReadStream(buffer).pipe(stream)
   })
 }
 
+// Upload de document (CV, PDF...)
 async function uploadDocument(buffer, originalName) {
   return new Promise((resolve, reject) => {
-    if (!buffer) {
-      return reject(new Error('Buffer manquant'))
-    }
-    
+    if (!buffer) return reject(new Error('Buffer manquant'))
+
     const stream = cloudinary.uploader.upload_stream(
       {
-        resource_type: "raw",  // Utilise "raw" pour les documents
-        folder: "realisations",
-        public_id: originalName.split('.')[0], // Sans extension
+        resource_type: 'raw',
+        folder: 'realisations',
+        public_id: originalName.split('.')[0],
         use_filename: true,
         overwrite: true
       },
@@ -57,7 +52,7 @@ async function uploadDocument(buffer, originalName) {
         }
       }
     )
-    
+
     streamifier.createReadStream(buffer).pipe(stream)
   })
 }

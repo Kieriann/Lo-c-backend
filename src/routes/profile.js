@@ -140,9 +140,6 @@ const result = await uploadImage(photoFile.buffer, cleanName)
   })
 }
 
-await prisma.document.deleteMany({
-  where: { userId, type: 'CV' }
-})
 
 
       if (cvFile && cvFile.buffer) {
@@ -153,6 +150,9 @@ const cleanName = sanitizeFileName(cvFile.originalname).replace(/\.[^/.]+$/, '')
   const format = result.format || cvFile.originalname.split('.').pop().toLowerCase()
   const cvFileName = `v${result.version}/${result.public_id}.${format}`
 
+  console.log('Création CV → fileName:', cvFileName)
+
+  
   await prisma.document.create({
     data: {
       userId,
@@ -172,6 +172,8 @@ const cleanName = sanitizeFileName(cvFile.originalname).replace(/\.[^/.]+$/, '')
     }
   }
 )
+
+
 
 router.get('/profil', async (req, res) => {
   try {
@@ -201,6 +203,8 @@ const documents = await prisma.document.findMany({
     type: true
   }
 })
+
+console.log('Documents renvoyés:', documents)
 
     res.json({
       isAdmin: user.isAdmin,

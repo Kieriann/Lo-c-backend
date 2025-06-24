@@ -32,14 +32,16 @@ for (let i = 0; i < data.length; i++) {
   const r = data[i]
   const relatedFiles = files.filter(f => f.originalname.startsWith(`real-${i}-`))
 
-  const created = await prisma.realisation.create({
-    data: {
-      title: r.realTitle,
-      description: r.realDescription,
-      techs: r.realTech,
-      userId
-    }
-  })
+const created = await prisma.realisation.create({
+  data: {
+    title: r.realTitle,
+    description: r.realDescription,
+    techs: r.realTech,
+    userId,
+    fileName: relatedFiles[0]?.originalname || 'inconnu'
+  }
+})
+
 
   for (const f of relatedFiles) {
     const buffer = f.buffer

@@ -1,10 +1,10 @@
-
 const express = require('express')
 const router = express.Router()
-const nodemailer = require('nodemailer')
 const jwt = require('jsonwebtoken')
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
+const sgMail = require('@sendgrid/mail')
+sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 router.post('/', async (req, res) => {
   const { email } = req.body
@@ -21,20 +21,13 @@ router.post('/', async (req, res) => {
 
   const resetLink = `${process.env.FRONT_URL}/reset-password/${token}`
 
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.MAIL_USER,
-      pass: process.env.MAIL_PASS,
-    },
-  })
-
   try {
-    await transporter.sendMail({
-      from: process.env.MAIL_USER,
+    await sgMail.send({
       to: email,
+      from: process.env.EMAIL_FROM,
       subject: 'Réinitialisation de votre mot de passe',
       text: `Voici votre lien pour réinitialiser votre mot de passe : ${resetLink}`,
+      html: `<p>Voici votre lien pour réinitialiser votre mot de passe : <a href="${resetLink}">${resetLink}</a></p>`
     })
 
     res.json({ success: true })

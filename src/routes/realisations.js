@@ -83,7 +83,7 @@ router.get('/', async (req, res) => {
 
     const realisations = rawRealisations.map(r => ({
       ...r,
-      realFiles: r.files,
+      files: r.files,
     }))
 
     res.json(realisations)

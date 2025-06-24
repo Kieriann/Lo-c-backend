@@ -55,13 +55,7 @@ router.post(
       const realFiles = req.files?.realFiles || []
       for (let i = 0; i < experiencesData.length; i++) {
         const exp = experiencesData[i]
-        const file = realFiles.find(f => f.originalname === exp.realFile?.name)
-        if (file && file.buffer) {
-          console.log("realFile:", file.originalname, file.mimetype, file.buffer.length)
-          // Upload the file as a raw document to Cloudinary
-          await uploadDocument(file.buffer, file.originalname)
-        }
-        await prisma.experience.create({
+        const experience = await prisma.experience.create({
           data: {
             title: exp.title,
             client: exp.client || '',
@@ -72,6 +66,23 @@ router.post(
             userId
           }
         })
+        
+        const file = realFiles.find(f => f.originalname === exp.realFile?.name)
+        if (file && file.buffer) {
+          console.log("realFile:", file.originalname, file.mimetype, file.buffer.length)
+          const result = await uploadDocument(file.buffer, file.originalname)
+          
+          // Enregistre les détails Cloudinary dans la base de données
+          await prisma.experienceFile.create({
+            data: {
+              experienceId: experience.id,
+              public_id: result.public_id,
+              version: result.version,
+              format: result.format || file.originalname.split('.').pop().toLowerCase(),
+              originalName: file.originalname
+            }
+          })
+        }
       }
 
       await prisma.prestation.deleteMany({ where: { userId } })
@@ -125,14 +136,18 @@ router.post(
       if (cvFile && cvFile.buffer) {
         console.log("cvFile:", cvFile.originalname, cvFile.mimetype, cvFile.buffer.length)
         const result = await uploadDocument(cvFile.buffer, cvFile.originalname)
-        const cvFileName = `v${result.version}/${result.public_id}.${result.format || 'pdf'}`
+        
+        // Utilise le format retourné par Cloudinary ou l'extension du fichier original
+        const format = result.format || cvFile.originalname.split('.').pop().toLowerCase()
+        const cvFileName = `v${result.version}/${result.public_id}.${format}`
 
         await prisma.document.create({
           data: {
             userId,
             type: 'CV',
             fileName: cvFileName,
-            originalName: cvFile.originalname
+            originalName: cvFile.originalname,
+            format: format  // Stocke aussi le format
           }
         })
       }
@@ -170,7 +185,8 @@ router.get('/profil', async (req, res) => {
         id: true,
         fileName: true,
         originalName: true,
-        type: true
+        type: true,
+        format: true
       }
     })
 

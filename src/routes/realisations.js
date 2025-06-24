@@ -55,12 +55,13 @@ const created = await prisma.realisation.create({
     })
 
     await prisma.realisationFile.create({
-      data: {
-        realisationId: created.id,
-fileName: result.public_id + '.' + (result.format || 'pdf'),
-        originalName: f.originalname
-      }
-    })
+  data: {
+    realisation: { connect: { id: created.id } },
+    fileName: result.public_id + '.' + (result.format || 'pdf'),
+    originalName: f.originalname
+  }
+})
+
   }
 }
 

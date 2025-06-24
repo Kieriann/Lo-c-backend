@@ -56,7 +56,7 @@ for (let i = 0; i < data.length; i++) {
     await prisma.realisationFile.create({
       data: {
         realisationId: created.id,
-        fileName: result.public_id + '.' + (f.originalname.split('.').pop() || 'pdf'),
+fileName: result.public_id + '.' + (result.format || 'pdf'),
         originalName: f.originalname
       }
     })

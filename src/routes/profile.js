@@ -148,7 +148,7 @@ const result = await uploadImage(photoFile.buffer, cleanName)
   const result = await uploadDocument(cvFile.buffer, cleanName)
 
   const format = result.format || cvFile.originalname.split('.').pop().toLowerCase()
-const cvFileName = `v${result.version}/${result.public_id}.${format}`
+const cvFileName = result.secure_url
 
   console.log('Création CV → fileName:', cvFileName)
 

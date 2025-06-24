@@ -59,10 +59,14 @@ router.post(
         const buffer = file?.buffer
         let cloudinaryResult = null
 
+
+        if (file) {
+  console.log("realFile:", file.originalname, file.mimetype, file.buffer?.length)
+}
         if (buffer) {
           // uploadDocument attend un filePath, on va temporairement écrire le buffer si besoin
           // Mais ici, on va utiliser Multer, donc on peut juste passer le buffer et originalname
-          cloudinaryResult = await uploadDocument(file, file.originalname)
+          cloudinaryResult = await uploadDocument(file.buffer, file.originalname)
         }
 
         await prisma.experience.create({
@@ -108,7 +112,8 @@ router.post(
 
       const photoFile = req.files?.photo?.[0]
       const cvFile    = req.files?.cv?.[0]
-
+if (photoFile) {
+  console.log("photoFile:", photoFile.originalname, photoFile.mimetype, photoFile.buffer?.length)
       if (photoFile) {
         const result = await uploadImage(photoFile.path, photoFile.originalname)
         const photoFileName = `v${result.version}/${result.public_id}`
@@ -122,6 +127,9 @@ router.post(
           }
         })
       }
+
+      if (cvFile) {
+  console.log("cvFile:", cvFile.originalname, cvFile.mimetype, cvFile.buffer?.length)
 
       if (cvFile) {
         const result = await uploadDocument(cvFile.path, cvFile.originalname)

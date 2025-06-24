@@ -150,15 +150,24 @@ model Experience {
 }
 
 model Realisation {
-  id               Int      @id @default(autoincrement())
+  id               Int               @id @default(autoincrement())
   title            String
   description      String
   techs            String[]
-  fileName         String
-  originalName     String
   userId           Int
-  User             User     @relation(fields: [userId], references: [id])
+  User             User              @relation(fields: [userId], references: [id])
+  files            RealisationFile[]
 }
+
+
+model RealisationFile {
+  id             Int          @id @default(autoincrement())
+  realisation    Realisation  @relation(fields: [realisationId], references: [id])
+  realisationId  Int
+  fileName       String
+  originalName   String
+}
+
 
 
 //

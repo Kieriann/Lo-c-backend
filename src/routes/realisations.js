@@ -28,38 +28,41 @@ router.post('/', upload.array('realFiles'), async (req, res) => {
 
     await prisma.realisation.deleteMany({ where: { userId } })
 
-    for (let i = 0; i < data.length; i++) {
-      const r = data[i]
-const file = files[i] 
-      const buffer = file?.buffer
-      let cloudResult = null
+for (let i = 0; i < data.length; i++) {
+  const r = data[i]
+  const relatedFiles = files.filter(f => f.originalname.startsWith(`real-${i}-`))
 
-      if (buffer) {
-        cloudResult = await new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
-            { folder: 'realisations', resource_type: 'raw' },
-            (err, result) => {
-              if (err) reject(err)
-              else resolve(result)
-            }
-          )
-          streamifier.createReadStream(buffer).pipe(stream)
-        })
-        console.log('cloudResult:', cloudResult)
-      }
-
-      await prisma.realisation.create({
-        data: {
-          title: r.realTitle,
-          description: r.realDescription,
-          techs: r.realTech,
-fileName: cloudResult?.public_id,
-
-          originalName: r.realFile?.name || '',
-          userId
-        }
-      })
+  const created = await prisma.realisation.create({
+    data: {
+      title: r.realTitle,
+      description: r.realDescription,
+      techs: r.realTech,
+      userId
     }
+  })
+
+  for (const f of relatedFiles) {
+    const buffer = f.buffer
+    if (!buffer) continue
+
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'realisations', resource_type: 'raw' },
+        (err, res) => (err ? reject(err) : resolve(res))
+      )
+      streamifier.createReadStream(buffer).pipe(stream)
+    })
+
+    await prisma.realisationFile.create({
+      data: {
+        realisationId: created.id,
+        fileName: result.public_id + '.' + (f.originalname.split('.').pop() || 'pdf'),
+        originalName: f.originalname
+      }
+    })
+  }
+}
+
 
     res.status(200).json({ success: true })
   } catch (err) {
@@ -71,7 +74,10 @@ fileName: cloudResult?.public_id,
 router.get('/', async (req, res) => {
   try {
     const userId = req.user.id
-    const realisations = await prisma.realisation.findMany({ where: { userId } })
+const realisations = await prisma.realisation.findMany({
+  where: { userId },
+  include: { files: true }
+})
     res.json(realisations)
   } catch (err) {
     console.error('Erreur GET /realisations', err)

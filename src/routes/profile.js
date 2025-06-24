@@ -142,19 +142,16 @@ const result = await uploadImage(photoFile.buffer, cleanName)
 
 
 
-      if (cvFile && cvFile.buffer) {
+ if (cvFile && cvFile.buffer) {
   console.log("cvFile:", cvFile.originalname, cvFile.mimetype, cvFile.buffer.length)
-const cleanName = sanitizeFileName(cvFile.originalname).replace(/\.[^/.]+$/, '')
-const result = await uploadDocument(cvFile.buffer, cleanName)
+  const cleanName = sanitizeFileName(cvFile.originalname).replace(/\.[^/.]+$/, '')
+  const result = await uploadDocument(cvFile.buffer, cleanName)
 
-const format = result.format || cvFile.originalname.split('.').pop().toLowerCase()
-const cleanPublicId = result.public_id.replace(/^realisations\//, '')
-const cvFileName = `v${result.version}/${cleanPublicId}.${format}`
-
+  const format = result.format || cvFile.originalname.split('.').pop().toLowerCase()
+  const cvFileName = result.secure_url
 
   console.log('Création CV → fileName:', cvFileName)
 
-  
   await prisma.document.create({
     data: {
       userId,
@@ -165,6 +162,7 @@ const cvFileName = `v${result.version}/${cleanPublicId}.${format}`
     }
   })
 }
+
 
 
       res.status(200).json({ success: true })

@@ -77,15 +77,17 @@ router.get('/', async (req, res) => {
   try {
     const userId = req.user.id
 
-    const rawRealisations = await prisma.realisation.findMany({
-      where: { userId },
-      include: { files: true }
-    })
+const rawRealisations = await prisma.realisation.findMany({
+  where: { userId },
+  include: { realisationFiles: true }
+})
 
-    const realisations = rawRealisations.map(r => ({
-      ...r,
-      files: r.files,
-    }))
+
+const realisations = rawRealisations.map(r => ({
+  ...r,
+  files: r.realisationFiles,
+}))
+
 
     res.json(realisations)
   } catch (err) {

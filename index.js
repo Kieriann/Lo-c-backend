@@ -17,9 +17,10 @@ app.get('/healthz', (_req, res) => {
 
 // ─── CORS ────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: 'https://freesbiz.fr',
+  origin: ['https://freesbiz.fr', 'https://loic-frontend.vercel.app'],
   credentials: true,
 }))
+
 
 // ─── Middlewares globaux ─────────────────────────────────────────────
 app.use(express.json())

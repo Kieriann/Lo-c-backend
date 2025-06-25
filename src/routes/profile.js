@@ -220,7 +220,7 @@ console.log('Documents renvoyés:', documents)
           version: f.version,
           public_id: f.public_id,
           format: f.format,
-          originalName: f.originalname.replace(/\s+/g, '_'),
+          originalName: f.originalName.replace(/\s+/g, '_'),
 
         }))
       }))

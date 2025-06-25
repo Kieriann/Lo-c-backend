@@ -16,11 +16,12 @@ cloudinary.config({
 router.use(authenticateToken)
 
 const upload = multer({ storage: multer.memoryStorage() })
+
 function sanitizeFileName(name) {
   return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_')
 }
 
-// POST /api/realisations
+// POST /api/realisations (création/modification en masse)
 router.post('/', upload.array('realFiles'), async (req, res) => {
   try {
     const userId = req.user.id
@@ -67,15 +68,15 @@ router.post('/', upload.array('realFiles'), async (req, res) => {
         })
 
         await prisma.realisationFile.create({
-  data: {
-    realisationId: created.id,
-    fileName: `v${result.version}/${result.publicId}.${result.format || 'pdf'}`, // facultatif
-    version: String(result.version),
-    publicId: result.publicId.replace(/^realisations\//, ""),
-    format: result.format || 'pdf',
-    originalName: (f.originalname || '').replace(/\s+/g, '_'),
-  }
-});
+          data: {
+            realisationId: created.id,
+            fileName: `v${result.version}/${result.publicId}.${result.format || 'pdf'}`,
+            version: String(result.version),
+            publicId: result.publicId.replace(/^realisations\//, ""),
+            format: result.format || 'pdf',
+            originalName: (f.originalname || '').replace(/\s+/g, '_'),
+          }
+        })
       }
     }
 
@@ -85,6 +86,53 @@ router.post('/', upload.array('realFiles'), async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' })
   }
 })
+
+router.post(
+  '/upload-document',
+  authenticateToken,
+  upload.single('document'),
+  async (req, res) => {
+    try {
+      const userId = req.user.id
+      const realisationId = Number(req.body.realisationId) // récupère l'id passé
+      if (!realisationId) return res.status(400).json({ error: 'realisationId obligatoire' })
+
+      const file = req.file
+      if (!file || !file.buffer) return res.status(400).json({ error: 'Fichier manquant' })
+
+      const existingReal = await prisma.realisation.findUnique({
+        where: { id: realisationId, userId }
+      })
+      if (!existingReal) return res.status(404).json({ error: 'Réalisation non trouvée' })
+
+      const result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'realisations', resource_type: 'raw' },
+          (error, result) => (error ? reject(error) : resolve(result))
+        )
+        streamifier.createReadStream(file.buffer).pipe(stream)
+      })
+
+      const savedFile = await prisma.realisationFile.create({
+        data: {
+          realisationId,
+          fileName: result.original_filename || file.originalname,
+          publicId: result.public_id || result.publicId,
+          version: String(result.version),
+          format: result.format || 'pdf',
+          originalName: file.originalname,
+          resourceType: result.resource_type || 'raw',
+        },
+      })
+
+      res.json({ success: true, file: savedFile, cloudinary: result })
+    } catch (error) {
+      console.error('Erreur upload document réalisation:', error)
+      res.status(500).json({ error: 'Erreur serveur' })
+    }
+  }
+)
+
 
 // GET /api/realisations
 router.get('/', async (req, res) => {
@@ -96,22 +144,22 @@ router.get('/', async (req, res) => {
       include: { files: true }
     })
 
-const realisations = rawRealisations.map(r => ({
-  id: r.id,
-  title: r.title,
-  description: r.description,
-  techs: r.techs,
-  files: (r.files || []).map(f => ({
-    id: f.id,
-    publicId: f.publicId,
-    version: f.version,
-    format: f.format,
-originalName: f.originalName.replace(/\s+/g, '_'),
-    resourceType: f.resourceType
-  }))
-}))
+    const realisations = rawRealisations.map(r => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      techs: r.techs,
+      files: (r.files || []).map(f => ({
+        id: f.id,
+        publicId: f.publicId,
+        version: f.version,
+        format: f.format,
+        originalName: f.originalName.replace(/\s+/g, '_'),
+        resourceType: f.resourceType
+      }))
+    }))
 
-res.json(realisations)
+    res.json(realisations)
   } catch (err) {
     console.error('Erreur GET /realisations', err)
     res.status(500).json({ error: 'Erreur serveur' })

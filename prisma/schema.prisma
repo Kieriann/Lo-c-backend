@@ -254,7 +254,7 @@ model Domain {
 
 enum DocumentType {
   ID_PHOTO
-  CV
+  cv
 }
 
 enum DiplomaType {

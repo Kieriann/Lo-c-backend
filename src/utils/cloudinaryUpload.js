@@ -52,7 +52,7 @@ function uploadDocument(buffer, filename) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
-        public_id: `CV/${filename}`,
+        public_id: `cv/${filename}`,
         resource_type: 'raw',
       },
       (error, result) => {

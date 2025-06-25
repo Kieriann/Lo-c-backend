@@ -15,7 +15,7 @@ router.post(
   '/profil',
   upload.fields([
     { name: 'photo' },
-    { name: 'CV' }
+    { name: 'cv' }
   ]),
   async (req, res) => {
     try {
@@ -68,16 +68,16 @@ router.post(
       }
 
       if (req.body.removeCV === 'true') {
-        const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'CV' } });
+        const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'cv' } });
         if (cvDoc) {
           await prisma.document.delete({ where: { id: cvDoc.id } });
         }
       }
 
       const photoFile = req.files?.photo?.[0];
-      const cvFile = req.files?.CV?.[0];
-      console.log('CV FILE:', cvFile);
-      console.log('Taille buffer CV:', cvFile?.buffer?.length);
+      const cvFile = req.files?.cv?.[0];
+      console.log('cv FILE:', cvFile);
+      console.log('Taille buffer cv:', cvFile?.buffer?.length);
 
 
 
@@ -120,14 +120,14 @@ await prisma.document.create({
 
       if (cvFile && cvFile.buffer) {
         const result = await uploadDocument(cvFile.buffer, cvFile.originalname);
-        await prisma.document.deleteMany({ where: { userId, type: 'CV' } });
+        await prisma.document.deleteMany({ where: { userId, type: 'cv' } });
 
         if (result.public_id && result.version && result.format) {
           try {
             await prisma.document.create({
               data: {
                 userId,
-                type: 'CV',
+                type: 'cv',
                 fileName: result.original_filename || cvFile.originalname || 'Sans nom',
                 public_id: result.public_id,
                 version: parseInt(result.version, 10),

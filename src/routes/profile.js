@@ -103,7 +103,7 @@ originalName: photoFile.originalname || 'Sans nom'
     public_id: result.public_id,
     version: parseInt(result.version, 10),
     format: result.format,
-    originalName: cvFile.originalname || 'Sans nom'
+    originalName: cvFile.originalname || result.original_filename || 'Sans nom'
   }
 });
       }

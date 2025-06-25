@@ -119,28 +119,30 @@ await prisma.document.create({
       }
 
       if (cvFile && cvFile.buffer) {
-        const result = await uploadDocument(cvFile.buffer, cvFile.originalname);
-        await prisma.document.deleteMany({ where: { userId, type: 'cv' } });
+  const result = await uploadDocument(cvFile.buffer, cvFile.originalname);
 
-        if (result.publicId && result.version && result.format) {
-          try {
-            await prisma.document.create({
-              data: {
-                userId,
-                type: 'cv',
-                fileName: result.original_filename || cvFile.originalname || 'Sans nom',
-                publicId: result.publicId,
-                version: parseInt(result.version, 10),
-                format: result.format,
-                originalName: cvFile.originalname || result.original_filename || 'Sans nom'
-              }
-            });
-          } catch (err) {
-            await deleteFile(result.publicId); // nettoyage Cloudinary
-            throw err;
-          }
-        }
-      }
+  if (result.publicId && result.version && result.format) {
+    await prisma.document.deleteMany({ where: { userId, type: 'cv' } }); // déplacer ici
+
+    try {
+      await prisma.document.create({
+        data: {
+          userId,
+          type: 'cv',
+          fileName: result.original_filename || cvFile.originalname || 'Sans nom',
+          publicId: result.publicId,
+          version: parseInt(result.version, 10),
+          format: result.format,
+          originalName: cvFile.originalname || result.original_filename || 'Sans nom'
+        },
+      });
+    } catch (err) {
+      await deleteFile(result.publicId); // nettoyage Cloudinary
+      throw err;
+    }
+  }
+}
+
 
       res.status(200).json({ success: true });
     } catch (err) {

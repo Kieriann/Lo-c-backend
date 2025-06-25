@@ -38,8 +38,10 @@ async function uploadImage(buffer, originalName) {
           console.error("Erreur Cloudinary:", error);
           reject(error);
         } else {
-          console.log("Réponse Cloudinary Image:", result.secure_url);
-          resolve(result);
+          resolve({
+            ...result,
+            publicId: result.public_id,
+          });
         }
       }
     );
@@ -57,7 +59,10 @@ function uploadDocument(buffer, filename) {
       },
       (error, result) => {
         if (error) return reject(error);
-        resolve(result);
+        resolve({
+          ...result,
+          publicId: result.public_id,
+        });
       }
     );
     streamifier.createReadStream(buffer).pipe(stream);

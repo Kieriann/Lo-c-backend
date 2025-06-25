@@ -120,6 +120,8 @@ await prisma.document.create({
 
       if (cvFile && cvFile.buffer) {
   const result = await uploadDocument(cvFile.buffer, cvFile.originalname);
+   console.log('CLOUDINARY RESULT CV', result);
+  
 
   if (result.publicId && result.version && result.format) {
     await prisma.document.deleteMany({ where: { userId, type: 'cv' } }); // déplacer ici

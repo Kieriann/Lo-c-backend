@@ -73,7 +73,7 @@ router.post('/', upload.array('realFiles'), async (req, res) => {
             version: String(result.version),
             public_id: result.public_id,
             format: result.format || 'pdf',
-originalName: f.originalName.replace(/\s+/g, '_'),
+originalName: (f.originalName || '').replace(/\s+/g, '_'),
           }
         })
       }

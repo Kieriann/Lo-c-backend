@@ -30,7 +30,7 @@ async function uploadImage(buffer, originalName) {
       {
         resource_type: 'image',
         folder: 'profil',
-        public_id: originalName.split('.')[0],
+        publicId: originalName.split('.')[0],
         overwrite: true
       },
       (error, result) => {
@@ -52,7 +52,7 @@ function uploadDocument(buffer, filename) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
-        public_id: `cv/${filename}`,
+        publicId: `cv/${filename}`,
         resource_type: 'raw',
       },
       (error, result) => {
@@ -64,9 +64,9 @@ function uploadDocument(buffer, filename) {
   });
 }
 
-async function deleteFile(public_id) {
+async function deleteFile(publicId) {
   try {
-    await cloudinary.uploader.destroy(public_id, { resource_type: 'auto' });
+    await cloudinary.uploader.destroy(publicId, { resource_type: 'auto' });
   } catch (err) {
     console.error("Erreur lors de la suppression Cloudinary :", err);
   }

@@ -11,7 +11,7 @@ const filePath = path.join(__dirname, "CV Freelance TAILHAN Céline.pdf");
 
 cloudinary.uploader.upload(filePath, {
   resource_type: "raw", 
-  public_id: "CV_Freelance_TAILHAN_CA_line"
+  publicId: "CV_Freelance_TAILHAN_CA_line"
 })
 .then(result => {
   console.log("✅ Upload réussi :", result.secure_url);

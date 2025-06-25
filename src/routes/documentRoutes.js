@@ -17,7 +17,7 @@ router.get('/me', authMiddleware, async (req, res, next) => {
   type: true,
   fileName: true,
   originalName: true,
-  public_id: true,
+  publicId: true,
   version: true,
   format: true
 }

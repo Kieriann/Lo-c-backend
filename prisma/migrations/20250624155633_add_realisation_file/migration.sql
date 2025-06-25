@@ -16,7 +16,7 @@ CREATE TABLE "RealisationFile" (
     "fileName" TEXT NOT NULL,
     "originalName" TEXT NOT NULL,
     "version" TEXT NOT NULL,
-    "public_id" TEXT NOT NULL,
+    "publicId" TEXT NOT NULL,
     "format" TEXT NOT NULL,
 
     CONSTRAINT "RealisationFile_pkey" PRIMARY KEY ("id")

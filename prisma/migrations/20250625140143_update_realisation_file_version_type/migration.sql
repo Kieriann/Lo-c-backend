@@ -7,7 +7,7 @@
 
 */
 -- AlterTable
-ALTER TABLE "RealisationFile" DROP COLUMN "public_id",
+ALTER TABLE "RealisationFile" DROP COLUMN "publicId",
 ADD COLUMN     "publicId" TEXT NOT NULL,
 DROP COLUMN "version",
 ADD COLUMN     "version" INTEGER;

@@ -69,9 +69,9 @@ router.post('/', upload.array('realFiles'), async (req, res) => {
         await prisma.realisationFile.create({
   data: {
     realisationId: created.id,
-    fileName: `v${result.version}/${result.public_id}.${result.format || 'pdf'}`, // facultatif
+    fileName: `v${result.version}/${result.publicId}.${result.format || 'pdf'}`, // facultatif
     version: String(result.version),
-    public_id: result.public_id.replace(/^realisations\//, ""),
+    publicId: result.publicId.replace(/^realisations\//, ""),
     format: result.format || 'pdf',
     originalName: (f.originalname || '').replace(/\s+/g, '_'),
   }
@@ -103,7 +103,7 @@ const realisations = rawRealisations.map(r => ({
   techs: r.techs,
   files: (r.files || []).map(f => ({
     id: f.id,
-    public_id: f.public_id,
+    publicId: f.publicId,
     version: f.version,
     format: f.format,
 originalName: f.originalName.replace(/\s+/g, '_'),

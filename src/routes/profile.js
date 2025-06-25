@@ -86,13 +86,13 @@ router.post(
         console.log('CLOUDINARY RESULT PHOTO', result); 
         await prisma.document.deleteMany({ where: { userId, type: 'ID_PHOTO' } });
 
-        if (result.public_id && result.version && result.format) {
+        if (result.publicId && result.version && result.format) {
           console.log('OBJET ENVOYÉ À PRISMA PHOTO', {
   userId,
   type: 'ID_PHOTO',
   fileName: result.original_filename,
   originalName: result.original_filename,
-  public_id: result.public_id,
+  publicId: result.publicId,
   version: parseInt(result.version, 10),
   format: result.format,
 });
@@ -104,7 +104,7 @@ await prisma.document.create({
     type: 'ID_PHOTO',
     fileName: result.original_filename,
     originalName: result.original_filename,
-    public_id: result.public_id,
+    publicId: result.publicId,
     version: parseInt(result.version, 10),
     format: result.format,
   },
@@ -112,7 +112,7 @@ await prisma.document.create({
 
 
           } catch (err) {
-            await deleteFile(result.public_id); // nettoyage Cloudinary
+            await deleteFile(result.publicId); // nettoyage Cloudinary
             throw err;
           }
         }
@@ -122,21 +122,21 @@ await prisma.document.create({
         const result = await uploadDocument(cvFile.buffer, cvFile.originalname);
         await prisma.document.deleteMany({ where: { userId, type: 'cv' } });
 
-        if (result.public_id && result.version && result.format) {
+        if (result.publicId && result.version && result.format) {
           try {
             await prisma.document.create({
               data: {
                 userId,
                 type: 'cv',
                 fileName: result.original_filename || cvFile.originalname || 'Sans nom',
-                public_id: result.public_id,
+                publicId: result.publicId,
                 version: parseInt(result.version, 10),
                 format: result.format,
                 originalName: cvFile.originalname || result.original_filename || 'Sans nom'
               }
             });
           } catch (err) {
-            await deleteFile(result.public_id); // nettoyage Cloudinary
+            await deleteFile(result.publicId); // nettoyage Cloudinary
             throw err;
           }
         }
@@ -163,7 +163,7 @@ router.get('/profil', async (req, res) => {
             type: true,
             fileName: true,
             originalName: true,
-            public_id: true,
+            publicId: true,
             version: true,
             format: true,
           }

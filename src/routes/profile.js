@@ -87,7 +87,7 @@ router.post(
     public_id: result.public_id,
     version: parseInt(result.version, 10),
     format: result.format,
-    originalName: photoFile.originalname
+originalName: photoFile.originalname || 'Sans nom'
   }
 });
       }
@@ -103,7 +103,7 @@ router.post(
     public_id: result.public_id,
     version: parseInt(result.version, 10),
     format: result.format,
-    originalName: cvFile.originalname
+    originalName: cvFile.originalname || 'Sans nom'
   }
 });
       }

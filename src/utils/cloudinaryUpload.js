@@ -1,35 +1,30 @@
-const cloudinary = require('cloudinary').v2
-const streamifier = require('streamifier')
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
 
-// Vérifie si le buffer correspond bien à une image valide (simple vérification magique number JPEG/PNG)
 function isValidImageBuffer(buffer) {
-  if (!buffer || buffer.length < 4) return false
+  if (!buffer || buffer.length < 4) return false;
 
-  // JPEG : FF D8 FF
-  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return true
-  // PNG : 89 50 4E 47
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return true;
   if (
     buffer[0] === 0x89 &&
     buffer[1] === 0x50 &&
     buffer[2] === 0x4E &&
     buffer[3] === 0x47
-  ) return true
-  // GIF : 47 49 46 38
+  ) return true;
   if (
     buffer[0] === 0x47 &&
     buffer[1] === 0x49 &&
     buffer[2] === 0x46 &&
     buffer[3] === 0x38
-  ) return true
+  ) return true;
 
-  return false
+  return false;
 }
 
-// Upload d'image (photo)
 async function uploadImage(buffer, originalName) {
   return new Promise((resolve, reject) => {
-    if (!buffer) return reject(new Error('Buffer manquant'))
-    if (!isValidImageBuffer(buffer)) return reject(new Error('Buffer image invalide (pas une image reconnue)'))
+    if (!buffer) return reject(new Error('Buffer manquant'));
+    if (!isValidImageBuffer(buffer)) return reject(new Error('Buffer image invalide (pas une image reconnue)'));
 
     const stream = cloudinary.uploader.upload_stream(
       {
@@ -40,20 +35,19 @@ async function uploadImage(buffer, originalName) {
       },
       (error, result) => {
         if (error) {
-          console.error("Erreur Cloudinary:", error)
-          reject(error)
+          console.error("Erreur Cloudinary:", error);
+          reject(error);
         } else {
-          console.log("Réponse Cloudinary Image:", result.secure_url)
-          resolve(result)
+          console.log("Réponse Cloudinary Image:", result.secure_url);
+          resolve(result);
         }
       }
-    )
+    );
 
-    streamifier.createReadStream(buffer).pipe(stream)
-  })
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
 }
 
-// Upload de document (CV, PDF...)
 function uploadDocument(buffer, filename) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -62,12 +56,20 @@ function uploadDocument(buffer, filename) {
         resource_type: 'raw',
       },
       (error, result) => {
-        if (error) return reject(error)
-        resolve(result)
+        if (error) return reject(error);
+        resolve(result);
       }
-    )
-    streamifier.createReadStream(buffer).pipe(stream)
-  })
+    );
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
 }
 
-module.exports = { uploadImage, uploadDocument }
+async function deleteFile(public_id) {
+  try {
+    await cloudinary.uploader.destroy(public_id, { resource_type: 'auto' });
+  } catch (err) {
+    console.error("Erreur lors de la suppression Cloudinary :", err);
+  }
+}
+
+module.exports = { uploadImage, uploadDocument, deleteFile };

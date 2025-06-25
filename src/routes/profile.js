@@ -4,7 +4,7 @@ const multer = require('multer');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const authenticateToken = require('../middlewares/authMiddleware');
-const { uploadImage, uploadDocument } = require('../utils/cloudinaryUpload');
+const { uploadImage, uploadDocument, deleteFile } = require('../utils/cloudinaryUpload'); // tu dois ajouter deleteFile dans ton fichier utils
 
 router.use(authenticateToken);
 
@@ -79,44 +79,58 @@ router.post(
       if (photoFile && photoFile.buffer) {
         const result = await uploadImage(photoFile.buffer, photoFile.originalname);
         await prisma.document.deleteMany({ where: { userId, type: 'ID_PHOTO' } });
-if (result.public_id && result.version && result.format) {
-  await prisma.document.create({
-    data: {
-      userId,
-      type: 'ID_PHOTO',
-      fileName: result.public_id,
-      public_id: result.public_id,
-      version: parseInt(result.version, 10),
-      format: result.format,
-      originalName: photoFile.originalname || result.original_filename || 'Sans nom'
+
+        if (result.public_id && result.version && result.format) {
+          try {
+            await prisma.document.create({
+              data: {
+                userId,
+                type: 'ID_PHOTO',
+                fileName: result.public_id,
+                public_id: result.public_id,
+                version: parseInt(result.version, 10),
+                format: result.format,
+                originalName: photoFile.originalname || result.original_filename || 'Sans nom'
+              }
+            });
+          } catch (err) {
+            await deleteFile(result.public_id); // nettoyage Cloudinary
+            throw err;
+          }
+        }
+      }
+
+      if (cvFile && cvFile.buffer) {
+        const result = await uploadDocument(cvFile.buffer, cvFile.originalname);
+        await prisma.document.deleteMany({ where: { userId, type: 'CV' } });
+
+        if (result.public_id && result.version && result.format) {
+          try {
+            await prisma.document.create({
+              data: {
+                userId,
+                type: 'CV',
+                fileName: result.public_id,
+                public_id: result.public_id,
+                version: parseInt(result.version, 10),
+                format: result.format,
+                originalName: cvFile.originalname || result.original_filename || 'Sans nom'
+              }
+            });
+          } catch (err) {
+            await deleteFile(result.public_id); // nettoyage Cloudinary
+            throw err;
+          }
+        }
+      }
+
+      res.status(200).json({ success: true });
+    } catch (err) {
+      console.error("ERREUR DANS L'UPLOAD DU PROFIL :", err);
+      res.status(500).json({ error: 'Erreur serveur', details: err.message });
     }
-  });
-}
-
-
-      }
-if (cvFile && cvFile.buffer) {
-  const result = await uploadDocument(cvFile.buffer, cvFile.originalname);
-  await prisma.document.deleteMany({ where: { userId, type: 'CV' } });
-
-  if (result.public_id && result.version && result.format) {
-    await prisma.document.create({
-      data: {
-        userId,
-        type: 'CV',
-        fileName: result.public_id,
-        public_id: result.public_id,
-        version: parseInt(result.version, 10),
-        format: result.format,
-        originalName: cvFile.originalname || result.original_filename || 'Sans nom'
-      }
-    });
   }
-}
-
-}
-  };
-
+);
 
 router.get('/profil', async (req, res) => {
   try {

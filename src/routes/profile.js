@@ -170,7 +170,6 @@ router.get('/profil', async (req, res) => {
             publicId: true,
             version: true,
             format: true,
-            secure_url: true,
           }
         },
         Experiences: true,

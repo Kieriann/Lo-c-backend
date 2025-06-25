@@ -15,7 +15,7 @@ router.post(
   '/profil',
   upload.fields([
     { name: 'photo' },
-    { name: 'cv' }
+    { name: 'CV' }
   ]),
   async (req, res) => {
     try {
@@ -68,14 +68,14 @@ router.post(
       }
 
       if (req.body.removeCV === 'true') {
-        const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'cv' } });
+        const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'CV' } });
         if (cvDoc) {
           await prisma.document.delete({ where: { id: cvDoc.id } });
         }
       }
 
       const photoFile = req.files?.photo?.[0];
-      const cvFile = req.files?.cv?.[0];
+      const cvFile = req.files?.CV?.[0];
       console.log('cv FILE:', cvFile);
       console.log('Taille buffer cv:', cvFile?.buffer?.length);
 

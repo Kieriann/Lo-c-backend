@@ -4,7 +4,6 @@ const multer = require('multer');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const authenticateToken = require('../middlewares/authMiddleware');
-// On importe CORRECTEMENT les fonctions que VOUS avez créées.
 const { uploadImage, uploadDocument } = require('../utils/cloudinaryUpload');
 
 router.use(authenticateToken);
@@ -42,7 +41,17 @@ router.post(
 
       await prisma.experience.deleteMany({ where: { userId } });
       for (const exp of experiencesData) {
-        await prisma.experience.create({ data: { ...exp, userId } });
+        await prisma.experience.create({
+          data: {
+            title: exp.title,
+            client: exp.client || '',
+            description: exp.description,
+            domains: exp.domains || '',
+            skills: JSON.stringify(exp.skills || []),
+            languages: Array.isArray(exp.languages) ? exp.languages : [],
+            userId
+          }
+        });
       }
 
       await prisma.prestation.deleteMany({ where: { userId } });
@@ -53,7 +62,6 @@ router.post(
       if (req.body.removePhoto === 'true') {
         const photoDoc = await prisma.document.findFirst({ where: { userId, type: 'ID_PHOTO' } });
         if (photoDoc) {
-          // La logique de suppression sur Cloudinary est dans votre fonction, ici on supprime juste de la BDD
           await prisma.document.delete({ where: { id: photoDoc.id } });
         }
       }
@@ -69,7 +77,6 @@ router.post(
       const cvFile = req.files?.cv?.[0];
 
       if (photoFile && photoFile.buffer) {
-        // ON UTILISE VOTRE FONCTION 'uploadImage'
         const result = await uploadImage(photoFile.buffer, photoFile.originalname);
         await prisma.document.deleteMany({ where: { userId, type: 'ID_PHOTO' } });
         await prisma.document.create({
@@ -85,7 +92,6 @@ router.post(
       }
 
       if (cvFile && cvFile.buffer) {
-        // ON UTILISE VOTRE FONCTION 'uploadDocument'
         const result = await uploadDocument(cvFile.buffer, cvFile.originalname);
         await prisma.document.deleteMany({ where: { userId, type: 'CV' } });
         await prisma.document.create({

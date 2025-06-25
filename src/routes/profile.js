@@ -152,7 +152,17 @@ router.get('/profil', async (req, res) => {
       where: { id: userId },
       include: {
         Profile: { include: { Address: true } },
-        Documents: true,
+        Documents: {
+          select: {
+            id: true,
+            type: true,
+            fileName: true,
+            originalName: true,
+            public_id: true,
+            version: true,
+            format: true,
+          }
+        },
         Experiences: true,
         Prestations: true,
         realisations: {

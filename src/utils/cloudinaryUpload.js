@@ -30,30 +30,21 @@ async function uploadImage(buffer, originalName) {
 }
 
 // Upload de document (CV, PDF...)
-async function uploadDocument(buffer, originalName) {
+function uploadDocument(buffer, filename) {
   return new Promise((resolve, reject) => {
-    if (!buffer) return reject(new Error('Buffer manquant'))
-
     const stream = cloudinary.uploader.upload_stream(
       {
-        resource_type: 'auto',
-        public_id: originalName.split('.')[0],
-        use_filename: true,
-        overwrite: true
+        public_id: `cv/${filename}`,
+        resource_type: 'raw',
       },
       (error, result) => {
-        if (error) {
-          console.error("Erreur Cloudinary:", error)
-          reject(error)
-        } else {
-          console.log("Réponse Cloudinary Document:", result.secure_url)
-          resolve(result)
-        }
+        if (error) return reject(error)
+        resolve(result)
       }
     )
-
     streamifier.createReadStream(buffer).pipe(stream)
   })
 }
+
 
 module.exports = { uploadImage, uploadDocument }

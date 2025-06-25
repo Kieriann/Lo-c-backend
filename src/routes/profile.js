@@ -10,6 +10,7 @@ router.use(authenticateToken);
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+
 router.post(
   '/profil',
   upload.fields([
@@ -76,6 +77,8 @@ router.post(
       const photoFile = req.files?.photo?.[0];
       const cvFile = req.files?.cv?.[0];
       console.log('CV FILE:', cvFile);
+      console.log('Taille buffer CV:', cvFile?.buffer?.length);
+
 
 
       if (photoFile && photoFile.buffer) {

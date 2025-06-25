@@ -82,17 +82,19 @@ router.post(
 
         if (result.public_id && result.version && result.format) {
           try {
-            await prisma.document.create({
-              data: {
-                userId,
-                type: 'ID_PHOTO',
-                fileName: result.public_id,
-                public_id: result.public_id,
-                version: parseInt(result.version, 10),
-                format: result.format,
-                originalName: photoFile.originalname || result.original_filename || 'Sans nom'
-              }
-            });
+await prisma.document.create({
+  data: {
+    userId,
+    type: 'ID_PHOTO',
+    fileName: result.original_filename,
+    originalName: result.original_filename,
+    public_id: result.public_id,
+    version: parseInt(result.version, 10),
+    format: result.format,
+  },
+});
+
+
           } catch (err) {
             await deleteFile(result.public_id); // nettoyage Cloudinary
             throw err;

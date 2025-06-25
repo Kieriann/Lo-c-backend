@@ -54,8 +54,9 @@ function uploadDocument(buffer, filename) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
-        publicId: `cv/${filename}`,
-        resource_type: 'pdf',
+        publicId: filename,
+        folder: 'cv',
+
       },
       (error, result) => {
         if (error) return reject(error);

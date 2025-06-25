@@ -4,28 +4,12 @@ const multer = require('multer');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const authenticateToken = require('../middlewares/authMiddleware');
-
-// On importe directement cloudinary, car on va utiliser sa méthode 'stream'
 const cloudinary = require('../utils/cloudinaryUpload');
 
 router.use(authenticateToken);
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-function sanitizeFileName(name) {
-  return name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9._-]/g, '_')
-    .replace(/\s+/g, '_');
-}
-
-/**
- * LA FONCTION DE CORRECTION :
- * On crée une fonction 'helper' qui sait comment envoyer un buffer à Cloudinary
- * en utilisant un 'stream'. On l'enveloppe dans une 'Promise' pour pouvoir
- * utiliser 'await' dessus, ce qui rend le code plus propre.
- */
 const uploadBufferToCloudinary = (fileBuffer, options) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {
@@ -34,11 +18,9 @@ const uploadBufferToCloudinary = (fileBuffer, options) => {
       }
       resolve(result);
     });
-    // On envoie le buffer dans le stream
     uploadStream.end(fileBuffer);
   });
 };
-
 
 router.post(
   '/profil',
@@ -71,10 +53,8 @@ router.post(
       });
 
       await prisma.experience.deleteMany({ where: { userId } });
-      const realFiles = req.files?.realFiles || [];
-
       for (const exp of experiencesData) {
-        const experience = await prisma.experience.create({
+        await prisma.experience.create({
           data: {
             title: exp.title,
             client: exp.client || '',
@@ -85,32 +65,12 @@ router.post(
             userId
           }
         });
-
-        const file = realFiles.find(f => f.originalname === exp.realFile?.name);
-        if (file && file.buffer) {
-          console.log("Uploading realFile:", file.originalname);
-          const result = await uploadBufferToCloudinary(file.buffer, {
-            folder: `user_files/${userId}/experiences`,
-            resource_type: 'raw' // Pour les documents divers
-          });
-          await prisma.experienceFile.create({
-            data: {
-              experienceId: experience.id,
-              public_id: result.public_id,
-              version: String(result.version),
-              format: result.format,
-              originalName: file.originalname
-            }
-          });
-        }
       }
 
       await prisma.prestation.deleteMany({ where: { userId } });
       for (const p of prestationsData) {
         await prisma.prestation.create({ data: { ...p, userId } });
       }
-
-      // --- GESTION DES DOCUMENTS (PHOTO ET CV) ENTIÈREMENT CORRIGÉE ---
 
       if (req.body.removePhoto === 'true') {
         const photoDoc = await prisma.document.findFirst({ where: { userId, type: 'ID_PHOTO' } });
@@ -132,17 +92,11 @@ router.post(
       const cvFile = req.files?.cv?.[0];
 
       if (photoFile && photoFile.buffer) {
-        console.log("Uploading photoFile:", photoFile.originalname);
-        // On utilise notre nouvelle fonction qui marche
         const result = await uploadBufferToCloudinary(photoFile.buffer, {
           folder: `user_files/${userId}`,
           resource_type: 'image'
         });
-
-        // On supprime l'ancienne photo s'il y en a une, avant de créer la nouvelle
         await prisma.document.deleteMany({ where: { userId, type: 'ID_PHOTO' } });
-        
-        // On sauvegarde les informations utiles dans la BDD
         await prisma.document.create({
           data: {
             userId,
@@ -156,16 +110,11 @@ router.post(
       }
 
       if (cvFile && cvFile.buffer) {
-        console.log("Uploading cvFile:", cvFile.originalname);
-        // On utilise notre nouvelle fonction qui marche
         const result = await uploadBufferToCloudinary(cvFile.buffer, {
           folder: `user_files/${userId}`,
-          resource_type: 'raw' // 'raw' est pour les fichiers non-image comme les PDF
+          resource_type: 'raw'
         });
-        
-        // On supprime l'ancien CV s'il y en a un
         await prisma.document.deleteMany({ where: { userId, type: 'CV' } });
-
         await prisma.document.create({
           data: {
             userId,
@@ -186,7 +135,6 @@ router.post(
   }
 );
 
-
 router.get('/profil', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -195,9 +143,13 @@ router.get('/profil', async (req, res) => {
       include: {
         Profile: { include: { Address: true } },
         Documents: true,
-        Experiences: { include: { files: true } },
+        Experiences: true,
         Prestations: true,
-        realisations: { include: { files: true } }
+        realisations: {
+          include: {
+            files: true
+          }
+        }
       }
     });
 
@@ -215,7 +167,7 @@ router.get('/profil', async (req, res) => {
     });
   } catch (err) {
     console.error('Erreur GET /profil', err);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ error: 'Erreur serveur', details: err.message });
   }
 });
 

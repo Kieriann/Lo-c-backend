@@ -78,9 +78,20 @@ router.post(
 
       if (photoFile && photoFile.buffer) {
         const result = await uploadImage(photoFile.buffer, photoFile.originalname);
+        console.log('CLOUDINARY RESULT PHOTO', result); 
         await prisma.document.deleteMany({ where: { userId, type: 'ID_PHOTO' } });
 
         if (result.public_id && result.version && result.format) {
+          console.log('OBJET ENVOYÉ À PRISMA PHOTO', {
+  userId,
+  type: 'ID_PHOTO',
+  fileName: result.original_filename,
+  originalName: result.original_filename,
+  public_id: result.public_id,
+  version: parseInt(result.version, 10),
+  format: result.format,
+});
+
           try {
 await prisma.document.create({
   data: {

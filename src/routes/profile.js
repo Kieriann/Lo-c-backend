@@ -145,7 +145,7 @@ const result = await uploadImage(photoFile.buffer, cleanName)
  if (cvFile && cvFile.buffer) {
   console.log("cvFile:", cvFile.originalname, cvFile.mimetype, cvFile.buffer.length)
   const cleanName = sanitizeFileName(cvFile.originalname).replace(/\.[^/.]+$/, '')
-  const result = await uploadDocument(cvFile.buffer, cleanName)
+  const result = await uploadDocument(cvFile.buffer, cleanName, 'raw')
 
   const format = result.format || cvFile.originalname.split('.').pop().toLowerCase()
 await prisma.document.create({

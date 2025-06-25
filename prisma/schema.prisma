@@ -59,7 +59,7 @@ model Document {
   type         String
   fileName     String
   originalName String
-  format       String?   // ← garde juste celui-là
+  format       String?   
   version      Int?
   public_id    String?
 

@@ -1,21 +1,43 @@
-const express = require('express')
-const router = express.Router()
-const multer = require('multer')
-const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
-const authenticateToken = require('../middlewares/authMiddleware')
-const { uploadImage, uploadDocument } = require('../utils/cloudinaryUpload')
+const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+const authenticateToken = require('../middlewares/authMiddleware');
 
-router.use(authenticateToken)
+// On importe directement cloudinary, car on va utiliser sa méthode 'stream'
+const cloudinary = require('../utils/cloudinaryUpload');
 
-const upload = multer({ storage: multer.memoryStorage() })
+router.use(authenticateToken);
+
+const upload = multer({ storage: multer.memoryStorage() });
+
 function sanitizeFileName(name) {
   return name
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // accents
-    .replace(/[^a-zA-Z0-9._-]/g, '_') // tout sauf lettres, chiffres, point, tiret, underscore
-    .replace(/\s+/g, '_') // espaces
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/\s+/g, '_');
 }
+
+/**
+ * LA FONCTION DE CORRECTION :
+ * On crée une fonction 'helper' qui sait comment envoyer un buffer à Cloudinary
+ * en utilisant un 'stream'. On l'enveloppe dans une 'Promise' pour pouvoir
+ * utiliser 'await' dessus, ce qui rend le code plus propre.
+ */
+const uploadBufferToCloudinary = (fileBuffer, options) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {
+      if (error) {
+        return reject(error);
+      }
+      resolve(result);
+    });
+    // On envoie le buffer dans le stream
+    uploadStream.end(fileBuffer);
+  });
+};
 
 
 router.post(
@@ -27,39 +49,31 @@ router.post(
   ]),
   async (req, res) => {
     try {
-      const userId = req.user.id
-      const profileData     = JSON.parse(req.body.profile)
-      const addressData     = JSON.parse(req.body.address)
-      const experiencesData = JSON.parse(req.body.experiences)
-      const prestationsData = JSON.parse(req.body.prestations)
+      const userId = req.user.id;
+      const profileData = JSON.parse(req.body.profile);
+      const addressData = JSON.parse(req.body.address);
+      const experiencesData = JSON.parse(req.body.experiences);
+      const prestationsData = JSON.parse(req.body.prestations);
 
-      const { availableDate, ...restProfile } = profileData
-      const availableDateParsed = availableDate ? new Date(availableDate) : undefined
+      const { availableDate, ...restProfile } = profileData;
+      const availableDateParsed = availableDate ? new Date(availableDate) : undefined;
 
       const profile = await prisma.profile.upsert({
         where: { userId },
-        update: {
-          ...restProfile,
-          ...(availableDateParsed && { availableDate: availableDateParsed })
-        },
-        create: {
-          ...restProfile,
-          ...(availableDateParsed && { availableDate: availableDateParsed }),
-          userId
-        }
-      })
+        update: { ...restProfile, ...(availableDateParsed && { availableDate: availableDateParsed }) },
+        create: { ...restProfile, ...(availableDateParsed && { availableDate: availableDateParsed }), userId }
+      });
 
       await prisma.address.upsert({
         where: { profileId: profile.id },
         update: { ...addressData },
         create: { ...addressData, profileId: profile.id }
-      })
+      });
 
-      await prisma.experience.deleteMany({ where: { userId } })
+      await prisma.experience.deleteMany({ where: { userId } });
+      const realFiles = req.files?.realFiles || [];
 
-      const realFiles = req.files?.realFiles || []
-      for (let i = 0; i < experiencesData.length; i++) {
-        const exp = experiencesData[i]
+      for (const exp of experiencesData) {
         const experience = await prisma.experience.create({
           data: {
             title: exp.title,
@@ -70,165 +84,139 @@ router.post(
             languages: Array.isArray(exp.languages) ? exp.languages : [],
             userId
           }
-        })
-        
-        const file = realFiles.find(f => f.originalname === exp.realFile?.name)
-if (file && file.buffer) {
-  console.log("realFile:", file.originalname, file.mimetype, file.buffer.length)
-  const cleanName = sanitizeFileName(file.originalname)
-  const result = await uploadDocument(file.buffer, cleanName)
+        });
 
-  await prisma.experienceFile.create({
-    data: {
-      experienceId: experience.id,
-      public_id: result.public_id,
-      version: result.version,
-      format: result.format || cleanName.split('.').pop().toLowerCase(),
-      originalName: cleanName
-    }
-  })
-}
-
+        const file = realFiles.find(f => f.originalname === exp.realFile?.name);
+        if (file && file.buffer) {
+          console.log("Uploading realFile:", file.originalname);
+          const result = await uploadBufferToCloudinary(file.buffer, {
+            folder: `user_files/${userId}/experiences`,
+            resource_type: 'raw' // Pour les documents divers
+          });
+          await prisma.experienceFile.create({
+            data: {
+              experienceId: experience.id,
+              public_id: result.public_id,
+              version: String(result.version),
+              format: result.format,
+              originalName: file.originalname
+            }
+          });
+        }
       }
 
-      await prisma.prestation.deleteMany({ where: { userId } })
+      await prisma.prestation.deleteMany({ where: { userId } });
       for (const p of prestationsData) {
-        await prisma.prestation.create({
-          data: {
-            type: p.type || '',
-            tech: p.tech || '',
-            level: p.level || '',
-            userId
-          }
-        })
+        await prisma.prestation.create({ data: { ...p, userId } });
       }
+
+      // --- GESTION DES DOCUMENTS (PHOTO ET CV) ENTIÈREMENT CORRIGÉE ---
 
       if (req.body.removePhoto === 'true') {
-        const photoDoc = await prisma.document.findFirst({ where: { userId, type: 'ID_PHOTO' } })
+        const photoDoc = await prisma.document.findFirst({ where: { userId, type: 'ID_PHOTO' } });
         if (photoDoc) {
-          // Optionally, destroy on Cloudinary if you wish:
-          // await cloudinary.uploader.destroy(photoDoc.fileName)
-          await prisma.document.delete({ where: { id: photoDoc.id } })
+          await cloudinary.uploader.destroy(photoDoc.public_id);
+          await prisma.document.delete({ where: { id: photoDoc.id } });
         }
       }
 
       if (req.body.removeCV === 'true') {
-        const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'CV' } })
+        const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'CV' } });
         if (cvDoc) {
-          // Optionally, destroy on Cloudinary if you wish:
-          // await cloudinary.uploader.destroy(cvDoc.fileName, { resource_type: 'raw' })
-          await prisma.document.delete({ where: { id: cvDoc.id } })
+          await cloudinary.uploader.destroy(cvDoc.public_id, { resource_type: 'raw' });
+          await prisma.document.delete({ where: { id: cvDoc.id } });
         }
       }
 
-      const photoFile = req.files?.photo?.[0]
-      const cvFile    = req.files?.cv?.[0]
+      const photoFile = req.files?.photo?.[0];
+      const cvFile = req.files?.cv?.[0];
 
       if (photoFile && photoFile.buffer) {
-  console.log("photoFile:", photoFile.originalname, photoFile.mimetype, photoFile.buffer.length)
-const cleanName = sanitizeFileName(photoFile.originalname).replace(/\.[^/.]+$/, '')
-const result = await uploadImage(photoFile.buffer, cleanName)
-  const photoFileName = `v${result.version}/${result.public_id}`
+        console.log("Uploading photoFile:", photoFile.originalname);
+        // On utilise notre nouvelle fonction qui marche
+        const result = await uploadBufferToCloudinary(photoFile.buffer, {
+          folder: `user_files/${userId}`,
+          resource_type: 'image'
+        });
 
-  await prisma.document.create({
-    data: {
-      userId,
-      type: 'ID_PHOTO',
-      fileName: photoFileName,
-      originalName: cleanName
-    }
-  })
-}
+        // On supprime l'ancienne photo s'il y en a une, avant de créer la nouvelle
+        await prisma.document.deleteMany({ where: { userId, type: 'ID_PHOTO' } });
+        
+        // On sauvegarde les informations utiles dans la BDD
+        await prisma.document.create({
+          data: {
+            userId,
+            type: 'ID_PHOTO',
+            public_id: result.public_id,
+            version: String(result.version),
+            format: result.format,
+            originalName: photoFile.originalname
+          }
+        });
+      }
 
+      if (cvFile && cvFile.buffer) {
+        console.log("Uploading cvFile:", cvFile.originalname);
+        // On utilise notre nouvelle fonction qui marche
+        const result = await uploadBufferToCloudinary(cvFile.buffer, {
+          folder: `user_files/${userId}`,
+          resource_type: 'raw' // 'raw' est pour les fichiers non-image comme les PDF
+        });
+        
+        // On supprime l'ancien CV s'il y en a un
+        await prisma.document.deleteMany({ where: { userId, type: 'CV' } });
 
+        await prisma.document.create({
+          data: {
+            userId,
+            type: 'CV',
+            public_id: result.public_id,
+            version: String(result.version),
+            format: result.format,
+            originalName: cvFile.originalname
+          }
+        });
+      }
 
- if (cvFile && cvFile.buffer) {
-  console.log("cvFile:", cvFile.originalname, cvFile.mimetype, cvFile.buffer.length)
-  const cleanName = sanitizeFileName(cvFile.originalname).replace(/\.[^/.]+$/, '')
-  console.log("cvFile size:", cvFile.buffer.length, "bytes")
-  const result = await uploadDocument(cvFile.buffer, cleanName)
-
-  const format = result.format || cvFile.originalname.split('.').pop().toLowerCase()
-await prisma.document.create({
-  data: {
-    userId,
-    type: 'CV',
-fileName: result.secure_url.replace('/image/upload/', '/raw/upload/'),
-    originalName: cleanName,
-    format: format,
-    version: result.version,
-    public_id: result.public_id
-  }
-})
-
-}
-
-
-
-      res.status(200).json({ success: true })
+      res.status(200).json({ success: true });
     } catch (err) {
-      console.error(err)
-      res.status(500).json({ error: 'Erreur serveur' })
+      console.error("ERREUR DANS L'UPLOAD DU PROFIL :", err);
+      res.status(500).json({ error: 'Erreur serveur', details: err.message });
     }
   }
-)
-
+);
 
 
 router.get('/profil', async (req, res) => {
   try {
-    const userId = req.user.id
-
+    const userId = req.user.id;
     const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
+      where: { id: userId },
       include: {
         Profile: { include: { Address: true } },
         Documents: true,
-        Experiences: true,
+        Experiences: { include: { files: true } },
         Prestations: true,
-        realisations: {
-          include: {
-            files: true
-          }
-        }
+        realisations: { include: { files: true } }
       }
-    })
+    });
 
-const documents = await prisma.document.findMany({
-  where: { userId },
-  select: {
-    id: true,
-    fileName: true,
-    originalName: true,
-    type: true
-  }
-})
-
-console.log('Documents renvoyés:', documents)
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
 
     res.json({
       isAdmin: user.isAdmin,
       profile: user.Profile,
       experiences: user.Experiences,
-      documents,
+      documents: user.Documents,
       prestations: user.Prestations,
-      realisations: user.realisations.map(r => ({
-        title: r.title,
-        description: r.description,
-        techs: r.techs,
-        files: r.files.map(f => ({
-          version: f.version,
-          public_id: f.public_id,
-          format: f.format,
-          originalName: f.originalName.replace(/\s+/g, '_'),
-
-        }))
-      }))
-    })
+      realisations: user.realisations
+    });
   } catch (err) {
-    console.error('Erreur GET /profil', err)
-    res.status(500).json({ error: 'Erreur serveur' })
+    console.error('Erreur GET /profil', err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
-})
+});
 
-module.exports = router
+module.exports = router;

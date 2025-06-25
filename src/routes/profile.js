@@ -87,7 +87,7 @@ router.post(
     public_id: result.public_id,
     version: parseInt(result.version, 10),
     format: result.format,
-originalName: photoFile.originalname || 'Sans nom'
+originalName: photoFile.originalname || result.original_filename || 'Sans nom'
   }
 });
       }

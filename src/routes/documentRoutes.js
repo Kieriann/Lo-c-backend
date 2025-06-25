@@ -13,10 +13,15 @@ router.get('/me', authMiddleware, async (req, res, next) => {
     const documents = await prisma.document.findMany({
       where: { userId },
       select: {
-        id: true,
-        type: true,
-        fileName: true,
-      }
+  id: true,
+  type: true,
+  fileName: true,
+  originalName: true,
+  public_id: true,
+  version: true,
+  format: true
+}
+
     })
 
     res.json(documents)

@@ -54,14 +54,17 @@ model User {
 //
 
 model Document {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  type        String   // "ID_PHOTO", "CV", etc.
-  fileName    String
+  id           Int     @id @default(autoincrement())
+  userId       Int
+  type         String
+  fileName     String
   originalName String
-  format      String?  // Nouveau champ (optionnel)
-  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  format       String?   // ← garde juste celui-là
+  version      Int?
+  public_id    String?
+
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("documents")
 }
 

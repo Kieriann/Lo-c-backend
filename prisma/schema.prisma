@@ -61,7 +61,7 @@ model Document {
   originalName String
   format       String?   
   version      Int?
-  public_id    String?
+  publicId    String?
 
   User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -170,8 +170,8 @@ model RealisationFile {
   realisationId  Int
   fileName       String
   originalName   String
-  version        String
-  public_id      String
+  version        Int?
+  publicId      String
   format         String
 }
 
@@ -254,7 +254,7 @@ model Domain {
 
 enum DocumentType {
   ID_PHOTO
-  cv
+  CV
 }
 
 enum DiplomaType {

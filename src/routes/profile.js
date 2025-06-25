@@ -153,7 +153,7 @@ await prisma.document.create({
   data: {
     userId,
     type: 'CV',
-    fileName: result.secure_url,
+fileName: result.secure_url.replace('/image/upload/', '/raw/upload/'),
     originalName: cleanName,
     format: format,
     version: result.version,

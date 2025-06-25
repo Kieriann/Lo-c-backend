@@ -75,6 +75,8 @@ router.post(
 
       const photoFile = req.files?.photo?.[0];
       const cvFile = req.files?.cv?.[0];
+      console.log('CV FILE:', cvFile);
+
 
       if (photoFile && photoFile.buffer) {
         const result = await uploadImage(photoFile.buffer, photoFile.originalname);
@@ -123,7 +125,7 @@ await prisma.document.create({
               data: {
                 userId,
                 type: 'CV',
-                fileName: result.public_id,
+                fileName: result.original_filename || cvFile.originalname || 'Sans nom',
                 public_id: result.public_id,
                 version: parseInt(result.version, 10),
                 format: result.format,

@@ -80,30 +80,32 @@ router.post(
         const result = await uploadImage(photoFile.buffer, photoFile.originalname);
         await prisma.document.deleteMany({ where: { userId, type: 'ID_PHOTO' } });
         await prisma.document.create({
-          data: {
-            userId,
-            type: 'ID_PHOTO',
-            public_id: result.public_id,
-            version: String(result.version),
-            format: result.format,
-            originalName: photoFile.originalname
-          }
-        });
+  data: {
+    userId,
+    type: 'ID_PHOTO',
+    fileName: result.public_id, 
+    public_id: result.public_id,
+    version: String(result.version),
+    format: result.format,
+    originalName: photoFile.originalname
+  }
+});
       }
 
       if (cvFile && cvFile.buffer) {
         const result = await uploadDocument(cvFile.buffer, cvFile.originalname);
         await prisma.document.deleteMany({ where: { userId, type: 'CV' } });
         await prisma.document.create({
-          data: {
-            userId,
-            type: 'CV',
-            public_id: result.public_id,
-            version: String(result.version),
-            format: result.format,
-            originalName: cvFile.originalname
-          }
-        });
+  data: {
+    userId,
+    type: 'CV',
+    fileName: result.public_id, 
+    public_id: result.public_id,
+    version: String(result.version),
+    format: result.format,
+    originalName: cvFile.originalname
+  }
+});
       }
 
       res.status(200).json({ success: true });

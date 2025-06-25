@@ -15,7 +15,7 @@ router.post(
   '/profil',
   upload.fields([
     { name: 'photo' },
-    { name: 'cv' }
+    { name: 'CV' }
   ]),
   async (req, res) => {
     try {
@@ -75,7 +75,7 @@ router.post(
       }
 
       const photoFile = req.files?.photo?.[0];
-      const cvFile = req.files?.cv?.[0];
+      const cvFile = req.files?.CV?.[0];
       console.log('CV FILE:', cvFile);
       console.log('Taille buffer CV:', cvFile?.buffer?.length);
 

@@ -21,12 +21,17 @@ function sanitizeFileName(name) {
   return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_')
 }
 
-// POST /api/realisations (création/modification en masse)
-router.post('/', upload.array('realFiles'), async (req, res) => {
+router.post('/', upload.fields([
+  { name: 'realFiles' },
+  { name: 'realisationDocument' }
+]), async (req, res) => {
   try {
     const userId = req.user.id
     const data = JSON.parse(req.body.data)
-    const files = Array.isArray(req.files) ? req.files : [req.files].filter(Boolean)
+    const files = []
+    if (req.files['realFiles']) files.push(...req.files['realFiles'])
+    if (req.files['realisationDocument']) files.push(...req.files['realisationDocument'])
+
 
     // Supprime tous les fichiers et réalisations précédentes de l'utilisateur
     await prisma.realisationFile.deleteMany({

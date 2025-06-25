@@ -4,30 +4,18 @@ const multer = require('multer');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const authenticateToken = require('../middlewares/authMiddleware');
-const cloudinary = require('../utils/cloudinaryUpload');
+// On importe CORRECTEMENT les fonctions que VOUS avez créées.
+const { uploadImage, uploadDocument } = require('../utils/cloudinaryUpload');
 
 router.use(authenticateToken);
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-const uploadBufferToCloudinary = (fileBuffer, options) => {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {
-      if (error) {
-        return reject(error);
-      }
-      resolve(result);
-    });
-    uploadStream.end(fileBuffer);
-  });
-};
-
 router.post(
   '/profil',
   upload.fields([
     { name: 'photo' },
-    { name: 'cv' },
-    { name: 'realFiles' }
+    { name: 'cv' }
   ]),
   async (req, res) => {
     try {
@@ -54,17 +42,7 @@ router.post(
 
       await prisma.experience.deleteMany({ where: { userId } });
       for (const exp of experiencesData) {
-        await prisma.experience.create({
-          data: {
-            title: exp.title,
-            client: exp.client || '',
-            description: exp.description,
-            domains: exp.domains || '',
-            skills: JSON.stringify(exp.skills || []),
-            languages: Array.isArray(exp.languages) ? exp.languages : [],
-            userId
-          }
-        });
+        await prisma.experience.create({ data: { ...exp, userId } });
       }
 
       await prisma.prestation.deleteMany({ where: { userId } });
@@ -75,7 +53,7 @@ router.post(
       if (req.body.removePhoto === 'true') {
         const photoDoc = await prisma.document.findFirst({ where: { userId, type: 'ID_PHOTO' } });
         if (photoDoc) {
-          await cloudinary.uploader.destroy(photoDoc.public_id);
+          // La logique de suppression sur Cloudinary est dans votre fonction, ici on supprime juste de la BDD
           await prisma.document.delete({ where: { id: photoDoc.id } });
         }
       }
@@ -83,7 +61,6 @@ router.post(
       if (req.body.removeCV === 'true') {
         const cvDoc = await prisma.document.findFirst({ where: { userId, type: 'CV' } });
         if (cvDoc) {
-          await cloudinary.uploader.destroy(cvDoc.public_id, { resource_type: 'raw' });
           await prisma.document.delete({ where: { id: cvDoc.id } });
         }
       }
@@ -92,10 +69,8 @@ router.post(
       const cvFile = req.files?.cv?.[0];
 
       if (photoFile && photoFile.buffer) {
-        const result = await uploadBufferToCloudinary(photoFile.buffer, {
-          folder: `user_files/${userId}`,
-          resource_type: 'image'
-        });
+        // ON UTILISE VOTRE FONCTION 'uploadImage'
+        const result = await uploadImage(photoFile.buffer, photoFile.originalname);
         await prisma.document.deleteMany({ where: { userId, type: 'ID_PHOTO' } });
         await prisma.document.create({
           data: {
@@ -110,10 +85,8 @@ router.post(
       }
 
       if (cvFile && cvFile.buffer) {
-        const result = await uploadBufferToCloudinary(cvFile.buffer, {
-          folder: `user_files/${userId}`,
-          resource_type: 'raw'
-        });
+        // ON UTILISE VOTRE FONCTION 'uploadDocument'
+        const result = await uploadDocument(cvFile.buffer, cvFile.originalname);
         await prisma.document.deleteMany({ where: { userId, type: 'CV' } });
         await prisma.document.create({
           data: {

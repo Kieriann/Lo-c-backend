@@ -35,7 +35,7 @@ function uploadDocument(buffer, filename) {
     const stream = cloudinary.uploader.upload_stream(
       {
         public_id: `cv/${filename}`,
-        resource_type: 'raw',
+        resource_type: 'auto',
       },
       (error, result) => {
         if (error) return reject(error)

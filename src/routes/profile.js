@@ -148,19 +148,18 @@ const result = await uploadImage(photoFile.buffer, cleanName)
   const result = await uploadDocument(cvFile.buffer, cleanName)
 
   const format = result.format || cvFile.originalname.split('.').pop().toLowerCase()
-const cvFileName = result.secure_url
+await prisma.document.create({
+  data: {
+    userId,
+    type: 'CV',
+    fileName: result.secure_url,
+    originalName: cleanName,
+    format: format,
+    version: result.version,
+    public_id: result.public_id
+  }
+})
 
-  console.log('Création CV → fileName:', cvFileName)
-
-  await prisma.document.create({
-    data: {
-      userId,
-      type: 'CV',
-      fileName: cvFileName,
-      originalName: cleanName,
-      format: format
-    }
-  })
 }
 
 

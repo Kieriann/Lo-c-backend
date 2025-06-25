@@ -71,7 +71,7 @@ router.post('/', upload.array('realFiles'), async (req, res) => {
             realisationId: created.id,
             fileName: `v${result.version}/${result.public_id}.${result.format || 'pdf'}`,
             version: String(result.version),
-            public_id: result.public_id,
+public_id: result.public_id.replace(/^realisations\//, ""),
             format: result.format || 'pdf',
 originalName: (f.originalname || '').replace(/\s+/g, '_'),
           }

@@ -85,7 +85,7 @@ router.post(
     type: 'ID_PHOTO',
     fileName: result.public_id, 
     public_id: result.public_id,
-    version: String(result.version),
+    version: parseInt(result.version, 10),
     format: result.format,
     originalName: photoFile.originalname
   }
@@ -101,7 +101,7 @@ router.post(
     type: 'CV',
     fileName: result.public_id, 
     public_id: result.public_id,
-    version: String(result.version),
+    version: parseInt(result.version, 10),
     format: result.format,
     originalName: cvFile.originalname
   }

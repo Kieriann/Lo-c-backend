@@ -19,21 +19,21 @@ const upload = multer({ storage: multer.memoryStorage() })
 
 router.post(
   '/',
- upload.any(),
+  upload.any(),
   async (req, res) => {
     try {
       const userId = req.user.id
       const data = JSON.parse(req.body.data)
-const realFilesGrouped = {}
+      const realFilesGrouped = {}
 
-for (const file of req.files || []) {
-  const match = file.originalname.match(/^real-(\d+)-/)
-  if (match) {
-    const idx = match[1]
-    if (!realFilesGrouped[idx]) realFilesGrouped[idx] = []
-    realFilesGrouped[idx].push(file)
-  }
-}
+      for (const file of req.files || []) {
+        const match = file.originalname.match(/^real-(\d+)-/)
+        if (match) {
+          const idx = match[1]
+          if (!realFilesGrouped[idx]) realFilesGrouped[idx] = []
+          realFilesGrouped[idx].push(file)
+        }
+      }
 
       await prisma.realisationFile.deleteMany({
         where: {
@@ -48,51 +48,52 @@ for (const file of req.files || []) {
 
       for (let i = 0; i < data.length; i++) {
         const r = data[i]
-const relatedDocs = realFilesGrouped[i] || []
+        const relatedDocs = realFilesGrouped[i] || []
 
-                const createdReal = await prisma.realisation.create({
-          data: {
-            title: r.title,
-            description: r.description,
-            userId,
-          },
-        })
+        await prisma.$transaction(async (tx) => {
+          const createdReal = await tx.realisation.create({
+            data: {
+              title: r.title,
+              description: r.description,
+              userId,
+            },
+          })
 
-        if (Array.isArray(r.techs)) {
-          for (const t of r.techs) {
-            await prisma.techno.create({
+          if (Array.isArray(r.techs)) {
+            for (const t of r.techs) {
+              await tx.techno.create({
+                data: {
+                  name: t.name,
+                  level: t.level,
+                  realisationId: createdReal.id,
+                },
+              })
+            }
+          }
+
+          for (const doc of relatedDocs) {
+            if (!doc?.buffer) continue
+
+            const result = await new Promise((resolve, reject) => {
+              const stream = cloudinary.uploader.upload_stream(
+                { folder: 'realisations' },
+                (err, resUpload) => (err ? reject(err) : resolve(resUpload))
+              )
+              streamifier.createReadStream(doc.buffer).pipe(stream)
+            })
+
+            await tx.realisationFile.create({
               data: {
-                name: t.name,
-                level: t.level,
                 realisationId: createdReal.id,
+                fileName: result.original_filename || doc.originalname,
+                version: result.version ? parseInt(result.version, 10) : null,
+                publicId: (result.public_id || result.publicId || '').replace(/^realisations\//, ''),
+                format: result.format || 'pdf',
+                originalName: (doc.originalname || 'SansNom').replace(/\s+/g, '_'),
               },
             })
           }
-        }
-
-
-        for (const doc of relatedDocs) {
-          if (!doc?.buffer) continue
-
-          const result = await new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-              { folder: 'realisations' }, // suppression resource_type
-              (err, resUpload) => (err ? reject(err) : resolve(resUpload))
-            )
-            streamifier.createReadStream(doc.buffer).pipe(stream)
-          })
-
-          await prisma.realisationFile.create({
-            data: {
-              realisationId: createdReal.id,
-              fileName: result.original_filename || doc.originalname,
-              version: result.version ? parseInt(result.version, 10) : null,
-              publicId: (result.public_id || result.publicId || '').replace(/^realisations\//, ''),
-              format: result.format || 'pdf',
-              originalName: (doc.originalname || 'SansNom').replace(/\s+/g, '_'),
-            },
-          })
-        }
+        })
       }
 
       res.status(200).json({ success: true })
@@ -129,7 +130,7 @@ router.post(
 
       const result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { folder: 'realisations' }, // suppression resource_type
+          { folder: 'realisations' },
           (error, output) => (error ? reject(error) : resolve(output))
         )
         streamifier.createReadStream(file.buffer).pipe(stream)
@@ -143,7 +144,6 @@ router.post(
           version: result.version ? parseInt(result.version, 10) : null,
           format: result.format || 'pdf',
           originalName: (file.originalname || 'SansNom').replace(/\s+/g, '_'),
-          // resourceType supprimé
         },
       })
 
@@ -159,14 +159,13 @@ router.get('/', async (req, res) => {
   try {
     const userId = req.user.id
 
-        const rawRealisations = await prisma.realisation.findMany({
+    const rawRealisations = await prisma.realisation.findMany({
       where: { userId },
       include: {
         files: true,
         techs: true,
       },
     })
-
 
     const realisations = rawRealisations.map(r => ({
       id: r.id,
@@ -179,7 +178,6 @@ router.get('/', async (req, res) => {
         version: f.version,
         format: f.format,
         originalName: (f.originalName || 'SansNom').replace(/\s+/g, '_'),
-        // resourceType supprimé ici aussi
       })),
     }))
 

@@ -29,7 +29,7 @@ router.post(
       const data = JSON.parse(req.body.data)
       const docs = []
 
-      if (req.files['realDocs']) docs.push(...req.files['realDocs'])
+      if (req.files['realFiles']) docs.push(...req.files['realFiles'])
       if (req.files['realisationDocument']) docs.push(...req.files['realisationDocument'])
 
       await prisma.realisationFile.deleteMany({

@@ -71,12 +71,12 @@ router.post('/', upload.fields([
           streamifier.createReadStream(f.buffer).pipe(stream)
         })
 
-        await prisma.realisationFile.create({
+          await prisma.realisationFile.create({
           data: {
             realisationId: created.id,
             fileName: `v${result.version}/${result.publicId}.${result.format || 'pdf'}`,
             version: String(result.version),
-            publicId: result.publicId.replace(/^realisations\//, ""),
+            publicId: (result.publicId || '').replace(/^realisations\//, ''),
             format: result.format || 'pdf',
             originalName: (f.originalname || 'SansNom').replace(/\s+/g, '_'),
           }

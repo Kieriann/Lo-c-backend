@@ -20,7 +20,7 @@ const upload = multer({ storage: multer.memoryStorage() })
 router.post(
   '/',
   upload.fields([
-    { name: 'realDocs' }, // changed from 'realFiles' to 'realDocs'
+    { name: 'realDocs' },
     { name: 'realisationDocument' }
   ]),
   async (req, res) => {
@@ -28,12 +28,10 @@ router.post(
       const userId = req.user.id
       const data = JSON.parse(req.body.data)
       const docs = []
-      
-      // Instead of req.files['realFiles'], we use req.files['realDocs']
+
       if (req.files['realDocs']) docs.push(...req.files['realDocs'])
       if (req.files['realisationDocument']) docs.push(...req.files['realisationDocument'])
 
-      // Supprime tous les fichiers et réalisations précédentes de l'utilisateur
       await prisma.realisationFile.deleteMany({
         where: {
           realisation: {
@@ -45,13 +43,10 @@ router.post(
         where: { userId }
       })
 
-      // Parcours des réalisations à créer
       for (let i = 0; i < data.length; i++) {
         const r = data[i]
-        // Filter docs with originalname starting with `real-${i}-`
         const relatedDocs = docs.filter(d => d.originalname && d.originalname.startsWith(`real-${i}-`))
 
-        // Création de la réalisation
         const createdReal = await prisma.realisation.create({
           data: {
             title: r.title,
@@ -61,24 +56,23 @@ router.post(
           },
         })
 
-        // Upload et enregistrement des fichiers associés
         for (const doc of relatedDocs) {
           if (!doc?.buffer) continue
 
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
-              { folder: 'realisations' },
+              { folder: 'realisations' }, // suppression resource_type
               (err, resUpload) => (err ? reject(err) : resolve(resUpload))
             )
             streamifier.createReadStream(doc.buffer).pipe(stream)
           })
-          
+
           await prisma.realisationFile.create({
             data: {
               realisationId: createdReal.id,
-              fileName: `v${result.version}/${result.public_id || result.publicId || 'no_publicId'}.${result.format || 'pdf'}`,
+              fileName: result.original_filename || doc.originalname,
               version: result.version ? parseInt(result.version, 10) : null,
-              publicId: (result.public_id || result.publicId || '').replace(/^realisations\//, ''),
+              publicId: result.public_id || result.publicId || '',
               format: result.format || 'pdf',
               originalName: (doc.originalname || 'SansNom').replace(/\s+/g, '_'),
             },
@@ -94,7 +88,6 @@ router.post(
   }
 )
 
-// Reste du fichier identique
 router.post(
   '/upload-document',
   authenticateToken,
@@ -121,7 +114,7 @@ router.post(
 
       const result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { folder: 'realisations'},
+          { folder: 'realisations' }, // suppression resource_type
           (error, output) => (error ? reject(error) : resolve(output))
         )
         streamifier.createReadStream(file.buffer).pipe(stream)
@@ -131,10 +124,11 @@ router.post(
         data: {
           realisationId,
           fileName: result.original_filename || file.originalname,
-          publicId: (result.public_id || result.publicId || '').replace(/^realisations\//, ''),
+          publicId: result.public_id || result.publicId || '',
           version: result.version ? parseInt(result.version, 10) : null,
           format: result.format || 'pdf',
           originalName: (file.originalname || 'SansNom').replace(/\s+/g, '_'),
+          // resourceType supprimé
         },
       })
 
@@ -146,7 +140,6 @@ router.post(
   }
 )
 
-// GET /api/realisations
 router.get('/', async (req, res) => {
   try {
     const userId = req.user.id
@@ -167,6 +160,7 @@ router.get('/', async (req, res) => {
         version: f.version,
         format: f.format,
         originalName: (f.originalName || 'SansNom').replace(/\s+/g, '_'),
+        // resourceType supprimé ici aussi
       })),
     }))
 

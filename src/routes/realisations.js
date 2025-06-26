@@ -19,10 +19,7 @@ const upload = multer({ storage: multer.memoryStorage() })
 
 router.post(
   '/',
-  upload.fields([
-    { name: 'realFiles' },
-    { name: 'realisationDocument' }
-  ]),
+ upload.any(),
   async (req, res) => {
     try {
       const userId = req.user.id

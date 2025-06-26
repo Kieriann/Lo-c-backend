@@ -71,12 +71,12 @@ router.post('/', upload.fields([
           streamifier.createReadStream(f.buffer).pipe(stream)
         })
 
-          await prisma.realisationFile.create({
+        await prisma.realisationFile.create({
           data: {
             realisationId: created.id,
-            fileName: `v${result.version}/${result.publicId}.${result.format || 'pdf'}`,
-            version: String(result.version),
-            publicId: (result.publicId || '').replace(/^realisations\//, ''),
+            fileName: `v${result.version}/${result.public_id || result.publicId || 'no_publicId'}.${result.format || 'pdf'}`,
+            version: result.version ? parseInt(result.version, 10) : null,
+            publicId: (result.public_id || result.publicId || '').replace(/^realisations\//, ''),
             format: result.format || 'pdf',
             originalName: (f.originalname || 'SansNom').replace(/\s+/g, '_'),
           }
@@ -112,7 +112,7 @@ router.post(
       const result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
           { folder: 'realisations', resource_type: 'raw' },
-          (error, result) => (error ? reject(error) : resolve(result))
+          (error, output) => (error ? reject(error) : resolve(output))
         )
         streamifier.createReadStream(file.buffer).pipe(stream)
       })
@@ -121,8 +121,8 @@ router.post(
         data: {
           realisationId,
           fileName: result.original_filename || file.originalname,
-          publicId: result.public_id || result.publicId,
-          version: String(result.version),
+          publicId: (result.public_id || result.publicId || '').replace(/^realisations\//, ''),
+          version: result.version ? parseInt(result.version, 10) : null,
           format: result.format || 'pdf',
           originalName: (file.originalname || 'SansNom').replace(/\s+/g, '_'),
           resourceType: result.resource_type || 'raw',

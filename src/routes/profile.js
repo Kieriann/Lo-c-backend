@@ -176,7 +176,8 @@ router.get('/profil', async (req, res) => {
         Prestations: true,
         realisations: {
           include: {
-            files: true
+            files: true,
+            techs: true
           }
         }
       }

@@ -24,10 +24,16 @@ router.post(
     try {
       const userId = req.user.id
       const data = JSON.parse(req.body.data)
-      const docs = []
+const realFilesGrouped = {}
 
-      if (req.files['realFiles']) docs.push(...req.files['realFiles'])
-      if (req.files['realisationDocument']) docs.push(...req.files['realisationDocument'])
+for (const file of req.files || []) {
+  const match = file.originalname.match(/^real-(\d+)-/)
+  if (match) {
+    const idx = match[1]
+    if (!realFilesGrouped[idx]) realFilesGrouped[idx] = []
+    realFilesGrouped[idx].push(file)
+  }
+}
 
       await prisma.realisationFile.deleteMany({
         where: {
@@ -42,7 +48,7 @@ router.post(
 
       for (let i = 0; i < data.length; i++) {
         const r = data[i]
-        const relatedDocs = docs.filter(d => d.originalname && d.originalname.startsWith(`real-${i}-`))
+const relatedDocs = realFilesGrouped[i] || []
 
         const createdReal = await prisma.realisation.create({
           data: {

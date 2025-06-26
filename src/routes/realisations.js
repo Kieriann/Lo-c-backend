@@ -121,7 +121,7 @@ router.post(
 
       const result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { folder: 'realisations', resource_type: 'raw' },
+          { folder: 'realisations'},
           (error, output) => (error ? reject(error) : resolve(output))
         )
         streamifier.createReadStream(file.buffer).pipe(stream)
@@ -135,7 +135,6 @@ router.post(
           version: result.version ? parseInt(result.version, 10) : null,
           format: result.format || 'pdf',
           originalName: (file.originalname || 'SansNom').replace(/\s+/g, '_'),
-          resourceType: result.resource_type || 'raw',
         },
       })
 
@@ -168,7 +167,6 @@ router.get('/', async (req, res) => {
         version: f.version,
         format: f.format,
         originalName: (f.originalName || 'SansNom').replace(/\s+/g, '_'),
-        resourceType: f.resourceType,
       })),
     }))
 

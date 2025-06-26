@@ -174,12 +174,6 @@ router.get('/profil', async (req, res) => {
         },
         Experiences: true,
         Prestations: true,
-        realisations: {
-          include: {
-            files: true,
-            techs: true
-          }
-        }
       }
     });
 
@@ -193,7 +187,6 @@ router.get('/profil', async (req, res) => {
       experiences: user.Experiences,
       documents: user.Documents,
       prestations: user.Prestations,
-      realisations: user.realisations
     });
   } catch (err) {
     console.error('Erreur GET /profil', err);

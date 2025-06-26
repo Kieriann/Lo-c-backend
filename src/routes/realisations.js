@@ -32,7 +32,6 @@ router.post('/', upload.fields([
     if (req.files['realFiles']) files.push(...req.files['realFiles'])
     if (req.files['realisationDocument']) files.push(...req.files['realisationDocument'])
 
-
     // Supprime tous les fichiers et réalisations précédentes de l'utilisateur
     await prisma.realisationFile.deleteMany({
       where: {
@@ -79,7 +78,7 @@ router.post('/', upload.fields([
             version: String(result.version),
             publicId: result.publicId.replace(/^realisations\//, ""),
             format: result.format || 'pdf',
-            originalName: (f.originalname || '').replace(/\s+/g, '_'),
+            originalName: (f.originalname || 'SansNom').replace(/\s+/g, '_'),
           }
         })
       }
@@ -125,7 +124,7 @@ router.post(
           publicId: result.public_id || result.publicId,
           version: String(result.version),
           format: result.format || 'pdf',
-          originalName: file.originalname,
+          originalName: (file.originalname || 'SansNom').replace(/\s+/g, '_'),
           resourceType: result.resource_type || 'raw',
         },
       })
@@ -137,7 +136,6 @@ router.post(
     }
   }
 )
-
 
 // GET /api/realisations
 router.get('/', async (req, res) => {
@@ -159,7 +157,7 @@ router.get('/', async (req, res) => {
         publicId: f.publicId,
         version: f.version,
         format: f.format,
-        originalName: f.originalName.replace(/\s+/g, '_'),
+        originalName: (f.originalName || 'SansNom').replace(/\s+/g, '_'),
         resourceType: f.resourceType
       }))
     }))

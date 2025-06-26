@@ -20,7 +20,7 @@ const upload = multer({ storage: multer.memoryStorage() })
 router.post(
   '/',
   upload.fields([
-    { name: 'realDocs' },
+    { name: 'realFiles' },
     { name: 'realisationDocument' }
   ]),
   async (req, res) => {

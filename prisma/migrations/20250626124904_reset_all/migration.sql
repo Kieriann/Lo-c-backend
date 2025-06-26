@@ -33,14 +33,17 @@ CREATE TABLE "User" (
 );
 
 -- CreateTable
-CREATE TABLE "Document" (
-    "id" TEXT NOT NULL,
-    "type" "DocumentType" NOT NULL,
+CREATE TABLE "documents" (
+    "id" SERIAL NOT NULL,
     "userId" INTEGER NOT NULL,
+    "type" TEXT NOT NULL,
     "fileName" TEXT NOT NULL,
     "originalName" TEXT NOT NULL,
+    "format" TEXT,
+    "version" INTEGER,
+    "publicId" TEXT,
 
-    CONSTRAINT "Document_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "documents_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -106,19 +109,47 @@ CREATE TABLE "CustomerReference" (
 CREATE TABLE "Experience" (
     "id" SERIAL NOT NULL,
     "title" TEXT NOT NULL,
+    "client" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "client" TEXT,
-    "domains" TEXT,
-    "skills" JSONB NOT NULL,
-    "languages" JSONB NOT NULL,
-    "realTitle" TEXT,
-    "realDescription" TEXT,
-    "realFilePath" TEXT,
+    "domains" TEXT NOT NULL,
+    "languages" TEXT[],
+    "skills" TEXT NOT NULL,
     "userId" INTEGER NOT NULL,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Experience_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Realisation" (
+    "id" SERIAL NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "userId" INTEGER NOT NULL,
+
+    CONSTRAINT "Realisation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RealisationFile" (
+    "id" SERIAL NOT NULL,
+    "realisationId" INTEGER NOT NULL,
+    "fileName" TEXT NOT NULL,
+    "originalName" TEXT NOT NULL,
+    "version" INTEGER,
+    "publicId" TEXT NOT NULL,
+    "format" TEXT NOT NULL,
+
+    CONSTRAINT "RealisationFile_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Techno" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "level" TEXT NOT NULL,
+    "realisationId" INTEGER NOT NULL,
+
+    CONSTRAINT "Techno_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -210,9 +241,6 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 CREATE UNIQUE INDEX "User_emailConfirmationToken_key" ON "User"("emailConfirmationToken");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Document_userId_key" ON "Document"("userId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Profile_userId_key" ON "Profile"("userId");
 
 -- CreateIndex
@@ -228,7 +256,7 @@ CREATE INDEX "_DomainToTraining_B_index" ON "_DomainToTraining"("B");
 ALTER TABLE "Address" ADD CONSTRAINT "Address_profileId_fkey" FOREIGN KEY ("profileId") REFERENCES "Profile"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Document" ADD CONSTRAINT "Document_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "documents" ADD CONSTRAINT "documents_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Profile" ADD CONSTRAINT "Profile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -247,6 +275,15 @@ ALTER TABLE "CustomerReference" ADD CONSTRAINT "CustomerReference_userId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "Experience" ADD CONSTRAINT "Experience_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Realisation" ADD CONSTRAINT "Realisation_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RealisationFile" ADD CONSTRAINT "RealisationFile_realisationId_fkey" FOREIGN KEY ("realisationId") REFERENCES "Realisation"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Techno" ADD CONSTRAINT "Techno_realisationId_fkey" FOREIGN KEY ("realisationId") REFERENCES "Realisation"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Training" ADD CONSTRAINT "Training_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

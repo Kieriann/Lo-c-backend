@@ -13,7 +13,7 @@ async function main() {
     where: { email: 'loic.bernard15@yahoo.fr' },
     update: {
       password: loicPasswordHash,
-      emailConfirmed: true,
+       emailConfirmed: true,
     },
     create: {
       email: 'loic.bernard15@yahoo.fr',

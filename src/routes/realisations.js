@@ -175,19 +175,23 @@ router.get('/', async (req, res) => {
       },
     })
 
-    const realisations = rawRealisations.map(r => ({
-      id: r.id,
-      title: r.title,
-      description: r.description,
-      techs: r.techs,
-      files: (r.files || []).map(f => ({
-        id: f.id,
-        publicId: f.publicId,
-        version: f.version,
-        format: f.format,
-        originalName: (f.originalName || 'SansNom').replace(/\s+/g, '_'),
-      })),
-    }))
+const realisations = rawRealisations.map(r => ({
+  id: r.id,
+  title: r.title,
+  description: r.description,
+  techs: (r.techs || []).map(t => ({
+    name: t.name,
+    level: t.level,
+  })),
+  files: (r.files || []).map(f => ({
+    id: f.id,
+    publicId: f.publicId,
+    version: f.version,
+    format: f.format,
+    originalName: (f.originalName || 'SansNom').replace(/\s+/g, '_'),
+  })),
+}))
+
 
     res.json(realisations)
   } catch (err) {

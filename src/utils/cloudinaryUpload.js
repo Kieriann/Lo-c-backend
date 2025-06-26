@@ -40,7 +40,7 @@ async function uploadImage(buffer, originalName) {
         } else {
           resolve({
             ...result,
-            publicId: result.public_id,
+            publicId: result.publicId,
           });
         }
       }
@@ -62,7 +62,7 @@ function uploadDocument(buffer, filename) {
         if (error) return reject(error);
         resolve({
           ...result,
-          publicId: result.public_id,
+          publicId: result.publicId,
         });
       }
     );

@@ -72,7 +72,7 @@ router.post(
               realisationId: createdReal.id,
               fileName: result.original_filename || doc.originalname,
               version: result.version ? parseInt(result.version, 10) : null,
-              publicId: result.publicId || result.publicId || '',
+              publicId: result.public_id || result.publicId || '',
               format: result.format || 'pdf',
               originalName: (doc.originalname || 'SansNom').replace(/\s+/g, '_'),
             },
@@ -124,7 +124,7 @@ router.post(
         data: {
           realisationId,
           fileName: result.original_filename || file.originalname,
-          publicId: result.publicId || result.publicId || '',
+          publicId: result.public_id || result.publicId || '',
           version: result.version ? parseInt(result.version, 10) : null,
           format: result.format || 'pdf',
           originalName: (file.originalname || 'SansNom').replace(/\s+/g, '_'),

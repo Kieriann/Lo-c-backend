@@ -157,7 +157,7 @@ model Realisation {
   id               Int               @id @default(autoincrement())
   title            String
   description      String
-  techs            String[]
+  techs            Techno[]
   userId           Int
   User             User              @relation(fields: [userId], references: [id])
   files            RealisationFile[]
@@ -173,6 +173,14 @@ model RealisationFile {
   version        Int?
   publicId      String
   format         String
+}
+
+model Techno {
+  id             Int          @id @default(autoincrement())
+  name           String
+  level          String
+  realisationId  Int
+  realisation    Realisation  @relation(fields: [realisationId], references: [id])
 }
 
 

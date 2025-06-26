@@ -50,14 +50,26 @@ for (const file of req.files || []) {
         const r = data[i]
 const relatedDocs = realFilesGrouped[i] || []
 
-        const createdReal = await prisma.realisation.create({
+                const createdReal = await prisma.realisation.create({
           data: {
             title: r.title,
             description: r.description,
-            techs: r.techs,
             userId,
           },
         })
+
+        if (Array.isArray(r.techs)) {
+          for (const t of r.techs) {
+            await prisma.techno.create({
+              data: {
+                name: t.name,
+                level: t.level,
+                realisationId: createdReal.id,
+              },
+            })
+          }
+        }
+
 
         for (const doc of relatedDocs) {
           if (!doc?.buffer) continue

@@ -45,7 +45,7 @@ router.post(
 
       for (let i = 0; i < data.length; i++) {
         const r = data[i]
-        const relatedDocs = docs.filter(d => d.originalname && d.originalname.startsWith(`real-${i}-`))
+        const relatedDocs = docs.filter(d => d.originalname && d.originalname.startsWith(real-${i}-))
 
         const createdReal = await prisma.realisation.create({
           data: {

@@ -35,16 +35,24 @@ router.post(
         }
       }
 
-      await prisma.realisationFile.deleteMany({
-        where: {
-          realisation: {
-            userId
-          }
-        }
-      })
-      await prisma.realisation.deleteMany({
-        where: { userId }
-      })
+      await prisma.techno.deleteMany({
+  where: {
+    realisation: {
+      userId
+    }
+  }
+})
+await prisma.realisationFile.deleteMany({
+  where: {
+    realisation: {
+      userId
+    }
+  }
+})
+await prisma.realisation.deleteMany({
+  where: { userId }
+})
+
 
       for (let i = 0; i < data.length; i++) {
         const r = data[i]

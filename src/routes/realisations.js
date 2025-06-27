@@ -35,7 +35,6 @@ router.post(
         }
       }
 
-const data = JSON.parse(req.body.data)
 const idsToKeep = []
 
 for (const r of data) {

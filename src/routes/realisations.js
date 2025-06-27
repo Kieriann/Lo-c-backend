@@ -49,11 +49,12 @@ const allReals = await prisma.realisation.findMany({
   select: { id: true }
 })
 const allRealIds = allReals.map(r => r.id)
-// Supprimer tous les fichiers sauf ceux à garder
+
+// Supprimer les fichiers non conservés
 await prisma.realisationFile.deleteMany({
   where: {
     realisationId: { in: allRealIds },
-    NOT: { id: { in: idsToKeep  } }
+    NOT: { id: { in: idsToKeep } }
   }
 })
 
@@ -69,6 +70,13 @@ await prisma.realisation.deleteMany({
   where: { userId }
 })
 
+// Vérification post-suppression
+const danglingFiles = await prisma.realisationFile.findMany({
+  where: {
+    NOT: { realisationId: { in: allRealIds } }
+  }
+})
+console.log('Fichiers avec realisationId orphelin:', danglingFiles)
 
 
 

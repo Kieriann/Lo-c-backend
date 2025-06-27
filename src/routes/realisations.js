@@ -58,6 +58,22 @@ await prisma.realisationFile.deleteMany({
   }
 })
 
+/// Supprimer tous les fichiers sauf ceux à garder
+await prisma.realisationFile.deleteMany({
+  where: {
+    realisationId: { in: allRealIds },
+    NOT: { id: { in: idsToKeep } }
+  }
+})
+
+// Vérification post-suppression
+const danglingFiles = await prisma.realisationFile.findMany({
+  where: {
+    NOT: { realisationId: { in: allRealIds } }
+  }
+})
+console.log('Fichiers avec realisationId orphelin:', danglingFiles)
+
 // Supprimer les technos liées
 await prisma.techno.deleteMany({
   where: {
@@ -69,16 +85,6 @@ await prisma.techno.deleteMany({
 await prisma.realisation.deleteMany({
   where: { userId }
 })
-
-// Vérification post-suppression
-const danglingFiles = await prisma.realisationFile.findMany({
-  where: {
-    NOT: { realisationId: { in: allRealIds } }
-  }
-})
-console.log('Fichiers avec realisationId orphelin:', danglingFiles)
-
-
 
       for (let i = 0; i < data.length; i++) {
         const r = data[i]

@@ -1,4 +1,3 @@
-console.log('Fichier index.js exécuté')
 
 const express = require('express')
 const cors = require('cors')

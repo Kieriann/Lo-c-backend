@@ -76,8 +76,7 @@ router.post(
 
       const photoFile = req.files?.photo?.[0];
       const cvFile = req.files?.cv?.[0];
-      console.log('cv FILE:', cvFile);
-      console.log('Taille buffer cv:', cvFile?.buffer?.length);
+  
 
 
 

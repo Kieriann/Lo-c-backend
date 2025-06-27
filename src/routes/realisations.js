@@ -49,28 +49,26 @@ const allReals = await prisma.realisation.findMany({
   select: { id: true }
 })
 const allRealIds = allReals.map(r => r.id)
-
-// Trouver les fichiers à garder
-const filesToKeep = idsToKeep
-
 // Supprimer tous les fichiers sauf ceux à garder
 await prisma.realisationFile.deleteMany({
   where: {
     realisationId: { in: allRealIds },
-    NOT: { id: { in: filesToKeep } }
+    NOT: { id: { in: idsToKeep  } }
   }
 })
 
-
-
-
+// Supprimer les technos liées
 await prisma.techno.deleteMany({
   where: {
     realisation: { userId }
   }
 })
 
-await prisma.realisation.deleteMany({ where: { userId } })
+// Supprimer les réalisations
+await prisma.realisation.deleteMany({
+  where: { userId }
+})
+
 
 
 

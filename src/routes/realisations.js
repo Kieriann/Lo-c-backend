@@ -43,13 +43,24 @@ for (const r of data) {
   }
 }
 
+// Trouver tous les IDs de réalisations de l'utilisateur
+const allReals = await prisma.realisation.findMany({
+  where: { userId },
+  select: { id: true }
+})
+const allRealIds = allReals.map(r => r.id)
 
+// Trouver les fichiers à garder
+const filesToKeep = idsToKeep
+
+// Supprimer tous les fichiers sauf ceux à garder
 await prisma.realisationFile.deleteMany({
   where: {
-    realisation: { userId },
-    NOT: { id: { in: idsToKeep } }
+    realisationId: { in: allRealIds },
+    NOT: { id: { in: filesToKeep } }
   }
 })
+
 
 
 

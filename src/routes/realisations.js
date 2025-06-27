@@ -34,12 +34,11 @@ router.post(
           realFilesGrouped[idx].push(file)
         }
       }
-
-const idsToKeep = []
+const idsToKeep = [];
 
 for (const r of data) {
   for (const f of (r.files || [])) {
-    if (f.id) idsToKeep.push(f.id)
+    if (f.id) idsToKeep.push(f.id);
   }
 }
 
@@ -47,8 +46,16 @@ for (const r of data) {
 const allReals = await prisma.realisation.findMany({
   where: { userId },
   select: { id: true }
-})
-const allRealIds = allReals.map(r => r.id)
+});
+
+const allRealIds = allReals.map(r => r.id);
+
+// Supprimer les technos liées (en premier)
+await prisma.techno.deleteMany({
+  where: {
+    realisation: { userId }
+  }
+});
 
 // Supprimer les fichiers non conservés
 await prisma.realisationFile.deleteMany({
@@ -56,85 +63,67 @@ await prisma.realisationFile.deleteMany({
     realisationId: { in: allRealIds },
     NOT: { id: { in: idsToKeep } }
   }
-})
-
-/// Supprimer tous les fichiers sauf ceux à garder
-await prisma.realisationFile.deleteMany({
-  where: {
-    realisationId: { in: allRealIds },
-    NOT: { id: { in: idsToKeep } }
-  }
-})
+});
 
 // Vérification post-suppression
 const danglingFiles = await prisma.realisationFile.findMany({
   where: {
     NOT: { realisationId: { in: allRealIds } }
   }
-})
-console.log('Fichiers avec realisationId orphelin:', danglingFiles)
+});
 
-// Supprimer les technos liées
-await prisma.techno.deleteMany({
-  where: {
-    realisation: { userId }
-  }
-})
+console.log('Fichiers avec realisationId orphelin:', danglingFiles);
 
 // Supprimer les réalisations
-await prisma.realisation.deleteMany({
-  where: { userId }
-})
+for (let i = 0; i < data.length; i++) {
+  const r = data[i];
+  const relatedDocs = realFilesGrouped[i] || [];
 
-      for (let i = 0; i < data.length; i++) {
-        const r = data[i]
-        const relatedDocs = realFilesGrouped[i] || []
+  await prisma.$transaction(async (tx) => {
+    const createdReal = await tx.realisation.create({
+      data: {
+        title: r.title,
+        description: r.description,
+        userId,
+      },
+    });
 
-        await prisma.$transaction(async (tx) => {
-          const createdReal = await tx.realisation.create({
-            data: {
-              title: r.title,
-              description: r.description,
-              userId,
-            },
-          })
-
-          if (Array.isArray(r.techs)) {
-            for (const t of r.techs) {
-              await tx.techno.create({
-                data: {
-                  name: t.name,
-                  level: t.level,
-                  realisationId: createdReal.id,
-                },
-              })
-            }
-          }
-
-          for (const doc of relatedDocs) {
-            if (!doc?.buffer) continue
-
-            const result = await new Promise((resolve, reject) => {
-              const stream = cloudinary.uploader.upload_stream(
-                { folder: 'realisations' },
-                (err, resUpload) => (err ? reject(err) : resolve(resUpload))
-              )
-              streamifier.createReadStream(doc.buffer).pipe(stream)
-            })
-
-            await tx.realisationFile.create({
-              data: {
-                realisationId: createdReal.id,
-                fileName: result.original_filename || doc.originalname,
-                version: result.version ? parseInt(result.version, 10) : null,
-                publicId: (result.public_id || result.publicId || '').replace(/^realisations\//, ''),
-                format: result.format || 'pdf',
-                originalName: (doc.originalname || 'SansNom').replace(/\s+/g, '_'),
-              },
-            })
-          }
-        })
+    if (Array.isArray(r.techs)) {
+      for (const t of r.techs) {
+        await tx.techno.create({
+          data: {
+            name: t.name,
+            level: t.level,
+            realisationId: createdReal.id,
+          },
+        });
       }
+    }
+
+    for (const doc of relatedDocs) {
+      if (!doc?.buffer) continue;
+
+      const result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'realisations' },
+          (err, resUpload) => (err ? reject(err) : resolve(resUpload))
+        );
+        streamifier.createReadStream(doc.buffer).pipe(stream);
+      });
+
+      await tx.realisationFile.create({
+        data: {
+          realisationId: createdReal.id,
+          fileName: result.original_filename || doc.originalname,
+          version: result.version ? parseInt(result.version, 10) : null,
+          publicId: (result.public_id || '').replace(/^realisations\//, ''),
+          format: result.format || 'pdf',
+          originalName: (doc.originalname || 'SansNom').replace(/\s+/g, '_'),
+        },
+      });
+    }
+  });
+}
 
       res.status(200).json({ success: true })
     } catch (err) {

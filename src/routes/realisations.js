@@ -46,10 +46,10 @@ for (const r of data) {
 
 await prisma.realisationFile.deleteMany({
   where: {
-    realisation: { userId },
-    NOT: { id: { in: idsToKeep } }
+    realisation: { userId }
   }
 })
+
 
 await prisma.techno.deleteMany({
   where: {

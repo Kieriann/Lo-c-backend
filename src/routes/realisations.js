@@ -35,6 +35,16 @@ router.post(
         }
       }
 
+const data = JSON.parse(req.body.data)
+const idsToKeep = []
+
+for (const r of data) {
+  for (const f of (r.files || [])) {
+    if (f.id) idsToKeep.push(f.id)
+  }
+}
+
+
       await prisma.techno.deleteMany({
   where: {
     realisation: {
@@ -44,11 +54,11 @@ router.post(
 })
 await prisma.realisationFile.deleteMany({
   where: {
-    realisation: {
-      userId
-    }
+    realisation: { userId },
+    NOT: { id: { in: idsToKeep } }
   }
 })
+
 await prisma.realisation.deleteMany({
   where: { userId }
 })

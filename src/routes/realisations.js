@@ -61,9 +61,14 @@ await prisma.techno.deleteMany({
 await prisma.realisationFile.deleteMany({
   where: {
     realisationId: { in: allRealIds },
-    NOT: { id: { in: idsToKeep } }
   }
 });
+
+// Supprimer toutes les réalisations existantes du user
+await prisma.realisation.deleteMany({
+  where: { userId }
+});
+
 
 // Vérification post-suppression
 const danglingFiles = await prisma.realisationFile.findMany({
@@ -80,25 +85,21 @@ for (let i = 0; i < data.length; i++) {
   const relatedDocs = realFilesGrouped[i] || [];
 
   await prisma.$transaction(async (tx) => {
-    const createdReal = await tx.realisation.create({
-      data: {
-        title: r.title,
-        description: r.description,
-        userId,
-      },
-    });
+   // Création réalisation + techs en même temps
+const createdReal = await tx.realisation.create({
+  data: {
+    title: r.title,
+    description: r.description,
+    userId,
+    techs: {
+      create: (r.techs || []).map(t => ({
+        name: t.name,
+        level: t.level,
+      })),
+    },
+  },
+});
 
-    if (Array.isArray(r.techs)) {
-      for (const t of r.techs) {
-        await tx.techno.create({
-          data: {
-            name: t.name,
-            level: t.level,
-            realisationId: createdReal.id,
-          },
-        });
-      }
-    }
 
     for (const doc of relatedDocs) {
       if (!doc?.buffer) continue;

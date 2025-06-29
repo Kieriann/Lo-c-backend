@@ -17,10 +17,8 @@ app.get('/healthz', (_req, res) => {
 // ─── CORS ────────────────────────────────────────────────────────────
 app.use(cors({
   origin: [
-    'http://localhost:5173',
     'https://freesbiz.fr',
     'https://loic-frontend.vercel.app',
-    'https://loic-frontend-ps84mol19-kierianns-projects.vercel.app'
   ],
   credentials: true,
   methods: ['GET','POST','PUT','DELETE','OPTIONS'],

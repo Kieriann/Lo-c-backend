@@ -30,11 +30,12 @@ router.post('/', upload.any(), async (req, res) => {
     const userId   = req.user.id;
     const realData = JSON.parse(req.body.data || '[]');
 
+    // 1) Création / mise à jour
     for (const [idx, r] of realData.entries()) {
       let recordId = r.id;
 
       if (recordId) {
-        // MAJ d’une réal existante sans toucher aux fichiers
+        // MAJ d’une réal existante (hors fichiers)
         await prisma.realisation.update({
           where: { id: recordId },
           data: {
@@ -59,9 +60,21 @@ router.post('/', upload.any(), async (req, res) => {
           },
         });
         recordId = created.id;
+        r.id     = created.id;
       }
 
-      // Ajout des nouveaux PDFs pour cette réal
+              // 🆕 suppression des fichiers qui ont été retirés côté front
+        const keptFileIds = (r.files || [])
+          .filter(f => f.id)
+          .map(f => f.id);
+        await prisma.realisationFile.deleteMany({
+          where: {
+            realisationId: recordId,
+            id: { notIn: keptFileIds },
+          }
+        });
+
+      // 2) Ajout des nouveaux PDFs pour cette réal
       const pdfs = (req.files || []).filter(f => f.fieldname === `realFiles_${idx}`);
       for (const pdf of pdfs) {
         const up = await new Promise((resolve, reject) => {
@@ -84,11 +97,23 @@ router.post('/', upload.any(), async (req, res) => {
       }
     }
 
-    res.json({ success: true });
+    // 3) Suppression des réalisations supprimées en front
+    const existing = await prisma.realisation.findMany({
+      where : { userId },
+      select: { id: true },
+    });
+    const existingIds = existing.map(r => r.id);
+    const keptIds     = realData.filter(r => r.id).map(r => r.id);
+    await prisma.realisation.deleteMany({
+      where: { id: { in: existingIds.filter(id => !keptIds.includes(id)) } },
+    });
+
+    return res.json({ success: true });
   } catch (err) {
     console.error('POST /realisations', err);
-    res.status(500).json({ error: 'Erreur serveur', details: err.message });
+    return res.status(500).json({ error: 'Erreur serveur', details: err.message });
   }
 });
+
 
 module.exports = router;

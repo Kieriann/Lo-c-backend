@@ -2,9 +2,8 @@ const express = require('express');
 const router  = express.Router();
 
 const multer   = require('multer');
-const upload   = multer({ storage: multer.memoryStorage() });   // buffer en RAM
-const cloudinary = require('../utils/cloudinary');              // ← ton helper
-
+const upload   = multer({ storage: multer.memoryStorage() });   
+const { cloudinary } = require('../utils/cloudinary');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -14,7 +13,7 @@ router.use(authenticate);
 /* ───── GET identique (ok) ───────────────────────────── */
 router.get('/', async (req, res) => {
   try {
-    const userId = req.user.id;   // ← récupéré via authMiddleware
+    const userId = req.user.id;  
     const realisations = await prisma.realisation.findMany({
       where  : { userId },
       include: { technos: true, files: true },

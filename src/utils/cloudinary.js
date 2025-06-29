@@ -1,51 +1,43 @@
-const cloudinary = require('cloudinary').v2;
+// ./utils/cloudinary.js
+const { v2: cloudinary } = require('cloudinary');
 const streamifier = require('streamifier');
 
-function isValidImageBuffer(buffer) {
-  if (!buffer || buffer.length < 4) return false;
+/* ─────── config ─────────────────────────────────────────── */
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key   : process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return true;
-  if (
-    buffer[0] === 0x89 &&
-    buffer[1] === 0x50 &&
-    buffer[2] === 0x4E &&
-    buffer[3] === 0x47
-  ) return true;
-  if (
-    buffer[0] === 0x47 &&
-    buffer[1] === 0x49 &&
-    buffer[2] === 0x46 &&
-    buffer[3] === 0x38
-  ) return true;
-
-  return false;
+/* ─────── helpers ────────────────────────────────────────── */
+function isValidImageBuffer(buf) {
+  if (!buf || buf.length < 4) return false;
+  return (
+    // JPEG
+    (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) ||
+    // PNG
+    (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) ||
+    // GIF
+    (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38)
+  );
 }
 
-async function uploadImage(buffer, originalName) {
+/* ─────── uploads ───────────────────────────────────────── */
+function uploadImage(buffer, originalName) {
   return new Promise((resolve, reject) => {
-    if (!buffer) return reject(new Error('Buffer manquant'));
-    if (!isValidImageBuffer(buffer)) return reject(new Error('Buffer image invalide (pas une image reconnue)'));
+    if (!buffer)          return reject(new Error('Buffer manquant'));
+    if (!isValidImageBuffer(buffer))
+      return reject(new Error('Buffer invalide : pas une image'));
 
     const stream = cloudinary.uploader.upload_stream(
       {
         resource_type: 'image',
-        folder: 'profil',
-        publicId: originalName.split('.')[0],
-        overwrite: true
+        folder       : 'profil',
+        public_id    : originalName.split('.')[0],
+        overwrite    : true,
       },
-      (error, result) => {
-        if (error) {
-          console.error("Erreur Cloudinary:", error);
-          reject(error);
-        } else {
-          resolve({
-            ...result,
-            publicId: result.public_id,
-          });
-        }
-      }
+      (err, res) => (err ? reject(err) : resolve({ ...res, publicId: res.public_id }))
     );
-
     streamifier.createReadStream(buffer).pipe(stream);
   });
 }
@@ -53,29 +45,26 @@ async function uploadImage(buffer, originalName) {
 function uploadDocument(buffer, filename) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      {
-        publicId: filename,
-        folder: 'cv',
-
-      },
-      (error, result) => {
-        if (error) return reject(error);
-        resolve({
-          ...result,
-          publicId: result.public_id,
-        });
-      }
+      { folder: 'cv', public_id: filename },
+      (err, res) => (err ? reject(err) : resolve({ ...res, publicId: res.public_id }))
     );
     streamifier.createReadStream(buffer).pipe(stream);
   });
 }
 
+/* ─────── delete ────────────────────────────────────────── */
 async function deleteFile(publicId) {
   try {
     await cloudinary.uploader.destroy(publicId, { resource_type: 'auto' });
   } catch (err) {
-    console.error("Erreur lors de la suppression Cloudinary :", err);
+    console.error('Cloudinary delete error:', err);
   }
 }
 
-module.exports = { uploadImage, uploadDocument, deleteFile };
+/* ─────── exports ───────────────────────────────────────── */
+module.exports = {
+  cloudinary,      // pour accéder à upload_stream ailleurs
+  uploadImage,
+  uploadDocument,
+  deleteFile,
+};

@@ -21,11 +21,14 @@ app.use(cors({
     'https://freesbiz.fr',
     'https://loic-frontend.vercel.app',
     'https://loic-frontend-ps84mol19-kierianns-projects.vercel.app'
-
-
   ],
   credentials: true,
-}))
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization']
+}));
+
+app.options('*', cors());
+
 
 
 

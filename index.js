@@ -19,7 +19,10 @@ app.use(cors({
   origin: [
     'http://localhost:5173',
     'https://freesbiz.fr',
-    'https://loic-frontend.vercel.app'
+    'https://loic-frontend.vercel.app',
+    'https://loic-frontend-8jfui0byq-kierianns-projects.vercel.app'
+
+
   ],
   credentials: true,
 }))

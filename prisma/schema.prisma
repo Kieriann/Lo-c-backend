@@ -27,26 +27,26 @@ model Address {
 //
 
 model User {
-  id                  Int                 @id @default(autoincrement())
-  email               String              @unique @db.VarChar(255)
-  username            String
-  password            String
-  isAdmin             Boolean             @default(false)
-  Profile             Profile?
-  Documents           Document[]
-  Threads             Thread[]
-  Posts               Post[]
-  CustomersReferences CustomerReference[]
-  Prestations         Prestation[]
-  Experiences         Experience[]
-  realisations        Realisation[]
-  Trainings           Training[]
-  Diplomas            Diploma[]
-  Applications        Application[]
-  updatedAt           DateTime            @updatedAt
-  createdAt           DateTime            @default(now())
-  emailConfirmed      Boolean             @default(false)
-  emailConfirmationToken  String?         @unique 
+  id                     Int                 @id @default(autoincrement())
+  email                  String              @unique @db.VarChar(255)
+  username               String
+  password               String
+  isAdmin                Boolean             @default(false)
+  Profile                Profile?
+  Documents              Document[]
+  Threads                Thread[]
+  Posts                  Post[]
+  CustomersReferences    CustomerReference[]
+  Prestations            Prestation[]
+  Experiences            Experience[]
+  realisations           Realisation[]
+  Trainings              Training[]
+  Diplomas               Diploma[]
+  Applications           Application[]
+  updatedAt              DateTime            @updatedAt
+  createdAt              DateTime            @default(now())
+  emailConfirmed         Boolean             @default(false)
+  emailConfirmationToken String?             @unique
 }
 
 //
@@ -59,15 +59,14 @@ model Document {
   type         String
   fileName     String
   originalName String
-  format       String?   
+  format       String?
   version      Int?
-  publicId    String?
+  publicId     String?
 
-  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("documents")
 }
-
 
 //
 // ─── PROFIL PROFESSIONNEL ──────────────────────────────────────────
@@ -86,7 +85,7 @@ model Profile {
   smallDayRate       Int?      @default(0)
   mediumDayRate      Int?      @default(0)
   highDayRate        Int?      @default(0)
-  teleworkDays       Int       @default(0) 
+  teleworkDays       Int       @default(0)
   isEmployed         Boolean?  @default(false)
   availableDate      DateTime?
   User               User      @relation(fields: [userId], references: [id])
@@ -140,50 +139,54 @@ model CustomerReference {
 //
 
 model Experience {
-  id            Int      @id @default(autoincrement())
-  title         String
-  client        String
-  description   String
-  domains       String
-  languages     String[]
-  skills        String
-  userId        Int
-  User          User     @relation(fields: [userId], references: [id])
-  domainsList   Domain[]
-
+  id          Int      @id @default(autoincrement())
+  title       String
+  client      String
+  description String
+  domains     String
+  languages   String[]
+  skills      String
+  userId      Int
+  User        User     @relation(fields: [userId], references: [id])
+  domainsList Domain[]
 }
 
 model Realisation {
-  id               Int               @id @default(autoincrement())
-  title            String
-  description      String
-  techs            Techno[]
-  userId           Int
-  User             User              @relation(fields: [userId], references: [id])
-  files            RealisationFile[]
+  id          Int    @id @default(autoincrement())
+  title       String
+  description String
+  userId      Int
+  user        User   @relation(fields: [userId], references: [id])
+
+  files   RealisationFile[] @relation("RealisationFiles")
+  technos Techno[]          @relation("RealisationTechnos")
 }
 
+/**
+ * ----------- enfants ----------------------------------------------
+ */
 
 model RealisationFile {
-  id             Int          @id @default(autoincrement())
-  realisation    Realisation  @relation(fields: [realisationId], references: [id])
-  realisationId  Int
-  fileName       String
-  originalName   String
-  version        Int?
-  publicId      String
-  format         String
+  id            Int @id @default(autoincrement())
+  realisationId Int
+
+  realisation Realisation @relation("RealisationFiles", fields: [realisationId], references: [id], onDelete: Cascade)
+
+  fileName     String
+  originalName String
+  version      Int?
+  publicId     String
+  format       String
 }
 
 model Techno {
-  id             Int          @id @default(autoincrement())
-  name           String
-  level          String
-  realisationId  Int
-  realisation    Realisation  @relation(fields: [realisationId], references: [id])
+  id            Int    @id @default(autoincrement())
+  name          String
+  level         String
+  realisationId Int
+
+  realisation Realisation @relation("RealisationTechnos", fields: [realisationId], references: [id], onDelete: Cascade)
 }
-
-
 
 //
 // ─── FORMATIONS ET COMPÉTENCES ─────────────────────────────────────
@@ -250,7 +253,7 @@ model Prestation {
 model Domain {
   id          Int           @id @default(autoincrement())
   name        String        @unique
-  experiences   Experience[]
+  experiences Experience[]
   Training    Training[]
   Diploma     Diploma[]
   Application Application[]

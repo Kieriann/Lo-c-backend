@@ -35,8 +35,8 @@ const forgotPasswordRoutes = require('./src/routes/forgotPassword')
 const profileRoutes = require('./src/routes/profile.js')
 const adminRoutes   = require('./src/routes/admin')
 const documentRoutes = require('./src/routes/documentRoutes')
-const realisationRoutes = require('./src/routes/realisations')
 const resetPasswordRoutes = require('./src/routes/resetPassword')
+const realisationRoutes = require('./src/routes/realisations');
 
 
 // ─── Routes API ──────────────────────────────────────────────────────
@@ -44,7 +44,7 @@ app.use('/api/auth',    authRoutes)
 app.use('/api/profile', profileRoutes)
 app.use('/api/admin',   adminRoutes)
 app.use('/api/documents', documentRoutes)
-app.use('/api/realisations', realisationRoutes)
+app.use('/api/realisations', realisationRoutes);
 app.use('/api/forgot-password', forgotPasswordRoutes)
 app.use('/api/reset-password', resetPasswordRoutes)
 

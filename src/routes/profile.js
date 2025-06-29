@@ -4,26 +4,30 @@ const multer = require('multer');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const authenticateToken = require('../middlewares/authMiddleware');
-const { uploadImage, uploadDocument, deleteFile } = require('../utils/cloudinaryUpload'); // tu dois ajouter deleteFile dans ton fichier utils
+const { uploadImage, uploadDocument, deleteFile } = require('../utils/cloudinary'); 
 
 router.use(authenticateToken);
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+      /* helper : ne plante jamais si la chaîne est vide / undefined */
+const safeParse = (str, fallback = {}) => {
+  try { return JSON.parse(str ?? ''); } catch { return fallback; }
+};
 
 router.post(
   '/profil',
-  upload.fields([
-    { name: 'photo' },
-    { name: 'cv' }
-  ]),
+upload.any(),
   async (req, res) => {
     try {
       const userId = req.user.id;
-      const profileData = JSON.parse(req.body.profile);
-      const addressData = JSON.parse(req.body.address);
-      const experiencesData = JSON.parse(req.body.experiences);
-      const prestationsData = JSON.parse(req.body.prestations);
+
+
+
+     const profileData     = safeParse(req.body.profile);
+     const addressData     = safeParse(req.body.address);
+     const experiencesData = safeParse(req.body.experiences,  []);
+     const prestationsData = safeParse(req.body.prestations,  []);
 
       const { availableDate, ...restProfile } = profileData;
       const availableDateParsed = availableDate ? new Date(availableDate) : undefined;
@@ -74,8 +78,10 @@ router.post(
         }
       }
 
-      const photoFile = req.files?.photo?.[0];
-      const cvFile = req.files?.cv?.[0];
+      const photoFile = req.files?.find(f => f.fieldname === 'photo');
+      const  cvFile   = req.files?.find(f => f.fieldname === 'cv');
+      const realFiles = req.files?.filter(f => f.fieldname === 'files');
+
   
 
 

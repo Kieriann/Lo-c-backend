@@ -40,6 +40,30 @@ router.post('/profil', upload.any(), async (req, res) => {
       create: { ...addressData, profileId: profile.id }
     })
 
+    // rechargement du profil complet avec relations (incluant Address)
+    const fullProfile = await prisma.profile.findUnique({
+      where: { id: profile.id },
+      include: {
+        Address: true,
+        experiences: true,
+        prestations: true,
+        documents: true,
+      }
+    })
+
+    // patch sécurité si Address est absent
+    if (!fullProfile.Address) {
+      fullProfile.Address = {}
+    }
+
+    res.status(200).json(fullProfile)
+  } catch (err) {
+    console.error('Erreur POST /profil', err)
+    res.status(500).json({ error: 'Erreur sauvegarde profil', details: err.message })
+  }
+})
+
+
     // expériences
     await prisma.experience.deleteMany({ where: { userId } })
     for (const exp of experiencesData) {

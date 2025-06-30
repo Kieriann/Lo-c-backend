@@ -15,7 +15,7 @@ const safeParse = (str, fallback = {}) => {
   try { return JSON.parse(str ?? '') } catch { return fallback }
 }
 
-/* ───── POST /api/profile/profil ───────────────────────── */
+/* ───── POST /api/profile/profil ─────────────────────────────────────────────────── */
 router.post('/profil', upload.any(), async (req, res) => {
   try {
     const userId = req.user.id
@@ -108,30 +108,46 @@ router.post('/profil', upload.any(), async (req, res) => {
       })
     }
 
-// Rechargement du profil complet après tous les traitements
-const fullProfile = await prisma.profile.findUnique({
-  where: { id: profile.id },
+    // Rechargement du profil complet après tous les traitements
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: {
+        Profile: {
+          include: { Address: true }
+        },
+        Experiences: true,
+        Prestations: true,
+        realisations: {
+          include: { files: true, technos: true }
+        }
+      }
+    })
 
-  include: {
-    Address: true,
-    experiences: true,
-    prestations: true,
-    documents: true,
-  }
-})
+    const documents = await prisma.document.findMany({
+      where: { userId: user.id },
+      select: {
+        id: true, type: true,
+        originalName: true,
+        publicId: true, version: true, format: true
+      }
+    })
 
-if (!fullProfile.Address) {
-  fullProfile.Address = {}
-}
-
-res.status(200).json(fullProfile)
+    res.status(200).json({
+      isAdmin:      user.isAdmin,
+      profile:      user.Profile || {},
+      address:      user.Profile?.Address || {},
+      experiences:  user.Experiences || [],
+      prestations:  user.Prestations || [],
+      documents,
+      realisations: user.realisations || []
+    })
   } catch (err) {
     console.error("ERREUR DANS L'UPLOAD DU PROFIL :", err)
     res.status(500).json({ error: 'Erreur serveur', details: err.message })
   }
 })
 
-/* ───── GET /api/profile/profil ───────────────────────── */
+/* ───── GET /api/profile/profil ─────────────────────────────────────────────────── */
 router.get('/profil', async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
@@ -174,4 +190,3 @@ router.get('/profil', async (req, res) => {
 })
 
 module.exports = router
-

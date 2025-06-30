@@ -108,7 +108,23 @@ router.post('/profil', upload.any(), async (req, res) => {
       })
     }
 
-    res.status(200).json({ success: true })
+// Rechargement du profil complet après tous les traitements
+const fullProfile = await prisma.profile.findUnique({
+  where: { id: profile.id },
+
+  include: {
+    Address: true,
+    experiences: true,
+    prestations: true,
+    documents: true,
+  }
+})
+
+if (!fullProfile.Address) {
+  fullProfile.Address = {}
+}
+
+res.status(200).json(fullProfile)
   } catch (err) {
     console.error("ERREUR DANS L'UPLOAD DU PROFIL :", err)
     res.status(500).json({ error: 'Erreur serveur', details: err.message })

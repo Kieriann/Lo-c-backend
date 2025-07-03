@@ -24,7 +24,7 @@ router.post('/', async (req, res) => {
   try {
     await sgMail.send({
       to: email,
-      from: process.env.EMAIL_FROM,
+      from: 'no-reply@freesbiz.fr',
       subject: 'Réinitialisation de votre mot de passe',
       text: `Voici votre lien pour réinitialiser votre mot de passe : ${resetLink}`,
       html: `<p>Voici votre lien pour réinitialiser votre mot de passe : <a href="${resetLink}">${resetLink}</a></p>`

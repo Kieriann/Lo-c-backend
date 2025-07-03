@@ -44,7 +44,7 @@ async function signup(req, res) {
   // Envoi du mail via SendGrid
   await sgMail.send({
     to:      email,
-    from:    process.env.EMAIL_FROM,
+    from:    'no-reply@freesbiz.fr',
     subject: 'Confirme ton adresse e-mail',
     text:    `Bonjour ${prenom},\n\nPour activer votre compte, cliquez ici :\n${confirmUrl}`,
     html:    `<p>Bonjour ${prenom},</p><p>Pour activer votre compte, clique <a href="${confirmUrl}">ici</a>.</p>`,

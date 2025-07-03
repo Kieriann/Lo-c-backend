@@ -26,6 +26,7 @@ async function signup(req, res) {
   const hashedPassword = await bcrypt.hash(password, 10)
   const prenom = req.body.firstname || email.split('@')[0]
   const token          = crypto.randomBytes(32).toString('hex')
+  const username = prenom
 
   const user = await prisma.user.create({
     data: {

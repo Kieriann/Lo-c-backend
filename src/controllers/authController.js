@@ -24,7 +24,7 @@ async function signup(req, res) {
   }
 
   const hashedPassword = await bcrypt.hash(password, 10)
-  const username       = email.split('@')[0]
+  const prenom = req.body.firstname || email.split('@')[0]
   const token          = crypto.randomBytes(32).toString('hex')
 
   const user = await prisma.user.create({
@@ -45,8 +45,8 @@ async function signup(req, res) {
     to:      email,
     from:    process.env.EMAIL_FROM,
     subject: 'Confirme ton adresse e-mail',
-    text:    `Bonjour ${username},\n\nPour activer ton compte, clique ici :\n${confirmUrl}`,
-    html:    `<p>Bonjour ${username},</p><p>Pour activer ton compte, clique <a href="${confirmUrl}">ici</a>.</p>`,
+    text:    `Bonjour ${prenom},\n\nPour activer votre compte, cliquez ici :\n${confirmUrl}`,
+    html:    `<p>Bonjour ${prenom},</p><p>Pour activer votre compte, clique <a href="${confirmUrl}">ici</a>.</p>`,
   })
 
   return res

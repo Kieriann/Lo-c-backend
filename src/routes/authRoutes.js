@@ -9,6 +9,8 @@ router.get('/confirm-email', confirmEmail)
 router.post('/login', login)
 router.post('/reset-password', resetPassword)
 router.get('/me', authMiddleware, me)
+router.post('/delete-user', deleteUser)
+
 
 
 module.exports = router

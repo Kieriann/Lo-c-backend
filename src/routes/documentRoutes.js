@@ -30,4 +30,19 @@ router.get('/me', authMiddleware, async (req, res, next) => {
   }
 })
 
+// ─── Route : compter tous les CV enregistrés ─────────────────────────
+router.get('/count-cv', async (req, res) => {
+  try {
+    const count = await prisma.document.count({
+      where: {
+        type: 'cv' // Assure-toi que le type est bien 'cv' pour les documents CV
+      }
+    })
+    res.json({ count })
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
+
 module.exports = router

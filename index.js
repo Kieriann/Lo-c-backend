@@ -20,6 +20,7 @@ origin: (origin, callback) => {
   const allowed = [
     'https://freesbiz.fr',
     'https://loic-frontend.vercel.app',
+    'http://localhost:5173',
   ]
   const isVercelPreview = /^https:\/\/loic-frontend-[\w-]+\.vercel\.app$/.test(origin || '')
 

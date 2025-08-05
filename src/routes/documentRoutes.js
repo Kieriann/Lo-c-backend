@@ -43,6 +43,14 @@ router.get('/count-cv', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' })
   }
 })
+router.get('/', async (req, res) => {
+  try {
+    const documents = await prisma.document.findMany()
+    res.json(documents)
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
 
 
 module.exports = router

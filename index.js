@@ -17,6 +17,11 @@ app.get('/healthz', (_req, res) => {
 // ─── CORS ────────────────────────────────────────────────────────────
 app.use(cors({
 origin: (origin, callback) => {
+  if (!origin) {
+    callback(null, true)
+    return
+  }
+
   const allowed = [
     'https://freesbiz.fr',
     'https://loic-frontend.vercel.app',
@@ -30,6 +35,7 @@ origin: (origin, callback) => {
     callback(new Error('Not allowed by CORS'))
   }
 },
+
 
   credentials: true,
   methods: ['GET','POST','PUT','DELETE','OPTIONS'],

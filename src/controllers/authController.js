@@ -6,6 +6,10 @@ const sgMail   = require('@sendgrid/mail')
 require('dotenv').config()
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+const SENDGRID_KEY = process.env.SENDGRID_API_KEY
+if (SENDGRID_KEY && SENDGRID_KEY.startsWith('SG.')) {
+  sgMail.setApiKey(SENDGRID_KEY)
+}
 
 //
 // ─── Création de compte (inscription) ──────────────────────────────
@@ -49,6 +53,21 @@ async function signup(req, res) {
     text: `Bonjour,\n\nMerci pour votre inscription sur Free’s Biz.\n\nPour finaliser votre compte, cliquez sur le lien suivant :\n${confirmUrl}\n\nSi vous n’êtes pas à l’origine de cette demande, vous pouvez ignorer ce message.`,
     html: `<p>Bonjour,</p><p>Merci pour votre inscription sur <strong>Free’s Biz</strong>.</p><p>Pour finaliser votre compte, cliquez <a href="${confirmUrl}">ici</a>.</p><p>Si vous n’êtes pas à l’origine de cette demande, vous pouvez ignorer ce message.</p>`,
   })
+    if (SENDGRID_KEY && SENDGRID_KEY.startsWith('SG.')) {
+    try {
+      await sgMail.send({
+        to: email,
+        from: 'no-reply@freesbiz.fr',
+        subject: 'Merci pour votre inscription – dernière étape',
+        text: `Bonjour,\n\nMerci pour votre inscription sur Free’s Biz.\n\nPour finaliser votre compte, cliquez sur le lien suivant :\n${confirmUrl}\n\nSi vous n’êtes pas à l’origine de cette demande, vous pouvez ignorer ce message.`,
+        html: `<p>Bonjour,</p><p>Merci pour votre inscription sur <strong>Free’s Biz</strong>.</p><p>Pour finaliser votre compte, cliquez <a href="${confirmUrl}">ici</a>.</p><p>Si vous n’êtes pas à l’origine de cette demande, vous pouvez ignorer ce message.</p>`,
+      })
+    } catch (e) {
+      console.error('SendGrid error:', e.response?.body || e.message)
+    }
+  } else {
+    console.warn('SendGrid key absente ou invalide, email non envoyé')
+  }
 
   return res
     .status(201)

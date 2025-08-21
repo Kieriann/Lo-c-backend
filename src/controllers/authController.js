@@ -84,13 +84,16 @@ async function confirmEmail(req, res) {
 // ─── Connexion ─────────────────────────────────────────────────────
 //
 async function login(req, res) {
-const emailRaw = req.body.email
-const password = req.body.password
-if (!emailRaw || !password) {
-  return res.status(400).json({ error: 'Email et mot de passe requis' })
-}
-const normalizedEmail = emailRaw.toLowerCase()
-const user = await prisma.user.findUnique({ where: { email: normalizedEmail } })
+  const emailRaw = req.body.email
+  const password = req.body.password
+  if (!emailRaw || !password) {
+    return res.status(400).json({ error: 'Email et mot de passe requis' })
+  }
+  const normalizedEmail = emailRaw.toLowerCase()
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    select: { id: true, email: true, password: true, emailConfirmed: true, isAdmin: true, firstLoginAt: true }
+  })
 
   if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' })
   if (!user.emailConfirmed) {
@@ -102,13 +105,21 @@ const user = await prisma.user.findUnique({ where: { email: normalizedEmail } })
     return res.status(401).json({ error: 'Mot de passe incorrect' })
   }
 
+  const isFirstLogin = !user.firstLoginAt
+  if (isFirstLogin) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { firstLoginAt: new Date() }
+    })
+  }
+
   const jwtToken = jwt.sign(
     { userId: user.id, isAdmin: user.isAdmin },
     process.env.JWT_SECRET,
     { expiresIn: '7d' }
   )
 
-  res.json({ token: jwtToken, user: { id: user.id, email: user.email } })
+  res.json({ token: jwtToken, isFirstLogin, user: { id: user.id, email: user.email } })
 }
 
 //
@@ -153,7 +164,6 @@ async function resetPassword(req, res) {
 }
 
 // pour delete un user par mail
-
 async function deleteUser(req, res) {
   try {
     const email = req.body.email
@@ -165,7 +175,5 @@ async function deleteUser(req, res) {
     res.status(500).json({ error: err.message })
   }
 }
-
-
 
 module.exports = { signup, confirmEmail, login, me, resetPassword, deleteUser }

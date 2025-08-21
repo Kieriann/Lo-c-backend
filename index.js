@@ -65,7 +65,7 @@ app.use('/api/documents', documentRoutes)
 app.use('/api/realisations', realisationRoutes);
 app.use('/api/forgot-password', forgotPasswordRoutes)
 app.use('/api/reset-password', resetPasswordRoutes)
-app.use('/api/sponsor', require('./routes/sponsor'))
+app.use('/api/sponsor', require('./src/routes/sponsor'))
 
 
 

@@ -5,10 +5,13 @@ const prisma   = require('../utils/prismaClient')
 const sgMail   = require('@sendgrid/mail')
 require('dotenv').config()
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY)
-const SENDGRID_KEY = process.env.SENDGRID_API_KEY
-if (SENDGRID_KEY && SENDGRID_KEY.startsWith('SG.')) {
+// ── SendGrid : activation seulement si clé valide ───────────────────
+const SENDGRID_KEY = process.env.SENDGRID_API_KEY || ''
+const CAN_SENDGRID = SENDGRID_KEY.startsWith('SG.')
+if (CAN_SENDGRID) {
   sgMail.setApiKey(SENDGRID_KEY)
+} else {
+  console.warn('SendGrid désactivé : clé absente ou invalide.')
 }
 
 //
@@ -29,7 +32,7 @@ async function signup(req, res) {
 
   const hashedPassword = await bcrypt.hash(password, 10)
   const prenom = req.body.firstname || email.split('@')[0]
-  const token          = crypto.randomBytes(32).toString('hex')
+  const token  = crypto.randomBytes(32).toString('hex')
   const username = prenom
 
   const user = await prisma.user.create({
@@ -45,15 +48,8 @@ async function signup(req, res) {
 
   const confirmUrl = `${process.env.FRONT_URL}/confirm-email?token=${user.emailConfirmationToken}`
 
-  // Envoi du mail via SendGrid
-  await sgMail.send({
-    to:      email,
-    from:    'no-reply@freesbiz.fr',
-    subject: 'Merci pour votre inscription – dernière étape',
-    text: `Bonjour,\n\nMerci pour votre inscription sur Free’s Biz.\n\nPour finaliser votre compte, cliquez sur le lien suivant :\n${confirmUrl}\n\nSi vous n’êtes pas à l’origine de cette demande, vous pouvez ignorer ce message.`,
-    html: `<p>Bonjour,</p><p>Merci pour votre inscription sur <strong>Free’s Biz</strong>.</p><p>Pour finaliser votre compte, cliquez <a href="${confirmUrl}">ici</a>.</p><p>Si vous n’êtes pas à l’origine de cette demande, vous pouvez ignorer ce message.</p>`,
-  })
-    if (SENDGRID_KEY && SENDGRID_KEY.startsWith('SG.')) {
+  // ── Envoi d’email non bloquant ───────────────────────────────────
+  if (CAN_SENDGRID) {
     try {
       await sgMail.send({
         to: email,
@@ -64,9 +60,8 @@ async function signup(req, res) {
       })
     } catch (e) {
       console.error('SendGrid error:', e.response?.body || e.message)
+      // On continue quand même : l’inscription ne doit pas échouer.
     }
-  } else {
-    console.warn('SendGrid key absente ou invalide, email non envoyé')
   }
 
   return res

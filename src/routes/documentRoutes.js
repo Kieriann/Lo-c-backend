@@ -52,5 +52,19 @@ router.get('/', async (req, res) => {
   }
 })
 
+// ─── Compter les PROFILS ayant au moins 1 CV ────────────────────────
+router.get('/count-cv-profiles', async (_req, res, next) => {
+  try {
+    const rows = await prisma.document.findMany({
+      where: { type: { equals: 'cv', mode: 'insensitive' } },
+      distinct: ['userId'],
+      select: { userId: true },
+    })
+    res.json({ count: rows.length })
+  } catch (err) {
+    next(err)
+  }
+})
+
 
 module.exports = router

@@ -49,7 +49,7 @@ model User {
   emailConfirmationToken String?             @unique
   sponsorEmail           String?             @db.VarChar(255)
   firstLoginAt           DateTime?
-
+  role                   Role                @default(INDEP)
 }
 
 //
@@ -275,4 +275,10 @@ enum DocumentType {
 enum DiplomaType {
   DIPLOMA
   CERTIFICATE
+}
+
+enum Role {
+  INDEP
+  CLIENT
+  ADMIN
 }

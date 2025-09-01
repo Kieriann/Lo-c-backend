@@ -35,16 +35,21 @@ async function signup(req, res) {
   const token  = crypto.randomBytes(32).toString('hex')
   const username = prenom
 
-  const user = await prisma.user.create({
-    data: {
-      email,
-      username,
-      password: hashedPassword,
-      isAdmin: email === 'loic.bernard15@yahoo.fr',
-      emailConfirmed: false,
-      emailConfirmationToken: token,
-    },
-  })
+  const role = req.body.role === 'CLIENT' ? 'CLIENT' : 'INDEP'
+
+
+const user = await prisma.user.create({
+  data: {
+    email,
+    username,
+    password: hashedPassword,
+    role,
+    isAdmin: email === 'loic.bernard15@yahoo.fr',
+    emailConfirmed: false,
+    emailConfirmationToken: token,
+  },
+})
+
 
   const confirmUrl = `${process.env.FRONT_URL}/confirm-email?token=${user.emailConfirmationToken}`
 
@@ -106,7 +111,7 @@ async function login(req, res) {
   const normalizedEmail = emailRaw.toLowerCase()
   const user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
-    select: { id: true, email: true, password: true, emailConfirmed: true, isAdmin: true, firstLoginAt: true }
+    select: { id: true, email: true, password: true, emailConfirmed: true, isAdmin: true, firstLoginAt: true, role: true }
   })
 
   if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' })
@@ -119,6 +124,19 @@ async function login(req, res) {
     return res.status(401).json({ error: 'Mot de passe incorrect' })
   }
 
+  const expectedRole = req.body?.expectedRole || null
+if (expectedRole && expectedRole !== user.role) {
+  return res.status(409).json({
+    error: 'ROLE_MISMATCH',
+    message: user.role === 'CLIENT'
+      ? 'Compte Client détecté. Bascule vers l’espace Client.'
+      : 'Compte Indépendant détecté. Bascule vers l’espace Indépendant.',
+    actual: user.role,
+    expected: expectedRole,
+  })
+}
+
+
   const isFirstLogin = !user.firstLoginAt
   if (isFirstLogin) {
     await prisma.user.update({
@@ -128,10 +146,10 @@ async function login(req, res) {
   }
 
   const jwtToken = jwt.sign(
-    { userId: user.id, isAdmin: user.isAdmin },
-    process.env.JWT_SECRET,
-    { expiresIn: '7d' }
-  )
+  { userId: user.id, isAdmin: user.isAdmin, role: user.role },
+  process.env.JWT_SECRET,
+  { expiresIn: '7d' }
+)
 
   res.json({ token: jwtToken, isFirstLogin, user: { id: user.id, email: user.email } })
 }

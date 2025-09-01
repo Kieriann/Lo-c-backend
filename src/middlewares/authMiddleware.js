@@ -17,7 +17,7 @@ function authenticateToken(req, res, next) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET)
     console.log('Token décodé :', payload)
-    req.user = { id: payload.userId }
+    req.user = { id: payload.userId, isAdmin: payload.isAdmin, role: payload.role }
     next()
   } catch (err) {
     console.log('Erreur jwt.verify :', err.message)

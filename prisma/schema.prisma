@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = "postgresql://postgres:shadowpw@127.0.0.1:5434/postgres?schema=public&sslmode=disable"
 }
 
 //
@@ -50,6 +51,7 @@ model User {
   sponsorEmail           String?             @db.VarChar(255)
   firstLoginAt           DateTime?
   role                   Role                @default(INDEP)
+  clientRequests         ClientRequest[]
 }
 
 //
@@ -281,4 +283,45 @@ enum Role {
   INDEP
   CLIENT
   ADMIN
+}
+
+enum RequestKind {
+  EXPERTISE
+  MISSION
+}
+
+enum Level {
+  JUNIOR
+  MEDIUM
+  EXPERT
+}
+
+enum LocationMode {
+  REMOTE
+  ONSITE
+}
+
+model City {
+  id             Int             @id @default(autoincrement())
+  name           String
+  country        String
+  countryCode    String
+  createdAt      DateTime        @default(now())
+  clientRequests ClientRequest[]
+
+  @@index([name])
+}
+
+model ClientRequest {
+  id           Int          @id @default(autoincrement())
+  kind         RequestKind
+  technology   String
+  level        Level
+  locationMode LocationMode
+  cityId       Int?
+  city         City?        @relation(fields: [cityId], references: [id])
+  citySnapshot String? // "Paris, FR" au moment de la demande
+  userId       Int
+  createdBy    User         @relation(fields: [userId], references: [id])
+  createdAt    DateTime     @default(now())
 }

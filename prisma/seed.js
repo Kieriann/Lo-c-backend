@@ -1,10 +1,9 @@
-// prisma/seed.js
-
-require('dotenv').config()           
+require('dotenv').config()
 const { PrismaClient } = require('@prisma/client')
 const bcrypt = require('bcrypt')
 
 const prisma = new PrismaClient()
+
 
 async function main() {
   // 1) Admin Loïc
@@ -43,6 +42,19 @@ async function main() {
     },
   })
   console.log('✅ Test prêt :', testUser.email, '/', testPlain)
+    // 3) Villes de test
+  await prisma.city.createMany({
+    data: [
+      { name: 'Paris', country: 'France', countryCode: 'FR' },
+      { name: 'Lyon', country: 'France', countryCode: 'FR' },
+      { name: 'Marseille', country: 'France', countryCode: 'FR' },
+      { name: 'Toulouse', country: 'France', countryCode: 'FR' },
+      { name: 'London', country: 'United Kingdom', countryCode: 'GB' },
+      { name: 'New York', country: 'United States', countryCode: 'US' },
+    ],
+    skipDuplicates: true,
+  })
+  console.log('✅ Villes de base insérées')
 }
 
 main()

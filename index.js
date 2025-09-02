@@ -52,6 +52,9 @@ const adminRoutes   = require('./src/routes/admin')
 const documentRoutes = require('./src/routes/documentRoutes')
 const resetPasswordRoutes = require('./src/routes/resetPassword')
 const realisationRoutes = require('./src/routes/realisations');
+const clientRequestsRouter = require('./src/routes/clientRequests.js')
+const citiesRouter = require('./src/routes/cities.js')
+
 
 
 // ─── Routes API ──────────────────────────────────────────────────────
@@ -63,6 +66,8 @@ app.use('/api/realisations', realisationRoutes);
 app.use('/api/forgot-password', forgotPasswordRoutes)
 app.use('/api/reset-password', resetPasswordRoutes)
 app.use('/api/sponsor', require('./src/routes/sponsor'))
+app.use('/api/client/requests', clientRequestsRouter)
+app.use('/api/cities', citiesRouter)
 
 
 

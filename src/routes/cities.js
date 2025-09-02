@@ -4,6 +4,17 @@ const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 const auth = require('../middlewares/authMiddleware')
 
+// util: fetch avec timeout
+async function fetchWithTimeout(url, opts = {}, timeoutMs = 2500) {
+  const ac = new AbortController()
+  const id = setTimeout(() => ac.abort(), timeoutMs)
+  try {
+    return await fetch(url, { ...opts, signal: ac.signal })
+  } finally {
+    clearTimeout(id)
+  }
+}
+
 // GET /api/cities?query=pa
 router.get('/', auth, async (req, res, next) => {
   try {
@@ -18,23 +29,32 @@ router.get('/', auth, async (req, res, next) => {
       orderBy: [{ name: 'asc' }],
     })
 
-    // 2) Fallback Nominatim si peu ou pas de résultats DB
+    // 2) Fallback Nominatim (plus tolérant) si peu de résultats
     let extCities = []
     if (dbCities.length < 10) {
-      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=20&q=${encodeURIComponent(q)}`
-      const resp = await fetch(url, {
-        headers: { 'User-Agent': 'freesbiz/1.0 (contact@freesbiz.local)' },
-      })
-      if (resp.ok) {
-        const arr = await resp.json()
-        extCities = (Array.isArray(arr) ? arr : [])
-          .filter(x => ['city', 'town', 'village', 'municipality'].includes(x.type))
-          .map(x => {
-            const name = x.name || (x.display_name || '').split(',')[0].trim()
-            const cc = (x.address?.country_code || '').toUpperCase()
-            const country = cc || x.address?.country || ''
-            return { id: null, name, country }
-          })
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=20&accept-language=fr,en&q=${encodeURIComponent(q)}`
+      try {
+        const resp = await fetchWithTimeout(url, {
+          headers: { 'User-Agent': 'FreesBiz/1.0 (contact@freesbiz.app)' },
+        }, 2500)
+        if (resp.ok) {
+          const arr = await resp.json()
+          extCities = (Array.isArray(arr) ? arr : [])
+            // élargit le filtre : on garde les lieux habités et assimilés
+            .filter(x => {
+              const t = (x.type || '').toLowerCase()
+              return ['city','town','village','municipality','suburb','hamlet','locality','neighbourhood'].includes(t)
+                || (x.class === 'place' && x.name)
+            })
+            .map(x => {
+              const name = x.name || (x.display_name || '').split(',')[0].trim()
+              const cc = (x.address?.country_code || '').toUpperCase()
+              const country = cc || x.address?.country || ''
+              return { id: null, name, country }
+            })
+        }
+      } catch {
+        // ignore timeout/abort
       }
     }
 
@@ -44,7 +64,6 @@ router.get('/', auth, async (req, res, next) => {
       name: c.name,
       country: c.countryCode || c.country || '',
     }))
-
     const all = [...normalizedDb, ...extCities]
     const seen = new Set()
     const uniq = all.filter(c => {

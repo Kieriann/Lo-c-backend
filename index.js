@@ -16,31 +16,28 @@ app.get('/healthz', (_req, res) => {
 
 // ─── CORS ────────────────────────────────────────────────────────────
 app.use(cors({
-origin: (origin, callback) => {
-  if (!origin) {
-    callback(null, true)
-    return
-  }
+  origin: (origin, callback) => {
+    const allowed = [
+      'https://freesbiz.fr',
+      'https://loic-frontend.vercel.app',
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://localhost:4173',     
+      'http://127.0.0.1:4173'
+    ]
+    const isVercelPreview = /^https:\/\/loic-frontend-[\w-]+\.vercel\.app$/.test(origin || '')
 
-  const allowed = [
-    'https://freesbiz.fr',
-    'https://loic-frontend.vercel.app',
-    'http://localhost:5173',
-  ]
-  const isVercelPreview = /^https:\/\/loic-frontend-[\w-]+\.vercel\.app$/.test(origin || '')
-
-  if (allowed.includes(origin) || isVercelPreview) {
-    callback(null, true)
-  } else {
-    callback(new Error('Not allowed by CORS'))
-  }
-},
-
-
+    if (!origin || allowed.includes(origin) || isVercelPreview) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
   credentials: true,
-  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization']
-}));
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+  optionsSuccessStatus: 204
+}))
 
 
 

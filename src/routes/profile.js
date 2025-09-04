@@ -24,14 +24,26 @@ router.post('/profil', upload.any(), async (req, res) => {
     const experiencesData = safeParse(req.body.experiences, [])
     const prestationsData = safeParse(req.body.prestations, [])
 
-    // upsert du profil
-    const { availableDate, ...restProfile } = profileData
-    const availableDateParsed = availableDate ? new Date(availableDate) : undefined
-    const profile = await prisma.profile.upsert({
-      where:  { userId },
-      update: { ...restProfile, ...(availableDateParsed && { availableDate: availableDateParsed }) },
-      create: { ...restProfile, ...(availableDateParsed && { availableDate: availableDateParsed }), userId }
-    })
+// upsert du profil
+const { availableDate, workerStatus, ...restProfile } = profileData
+const availableDateParsed = availableDate ? new Date(availableDate) : undefined
+const workerStatusSafe = workerStatus === 'salarie' ? 'salarie' : 'indep'
+
+const profile = await prisma.profile.upsert({
+  where:  { userId },
+  update: { 
+    ...restProfile, 
+    workerStatus: workerStatusSafe,
+    ...(availableDateParsed && { availableDate: availableDateParsed }) 
+  },
+  create: { 
+    ...restProfile, 
+    workerStatus: workerStatusSafe,
+    ...(availableDateParsed && { availableDate: availableDateParsed }), 
+    userId 
+  }
+})
+
 
     // upsert de l'adresse
     await prisma.address.upsert({

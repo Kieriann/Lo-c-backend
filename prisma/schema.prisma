@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider          = "postgresql"
   url               = env("DATABASE_URL")
-  shadowDatabaseUrl = "postgresql://postgres:shadowpw@127.0.0.1:5434/postgres?schema=public&sslmode=disable"
+shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 //
@@ -96,6 +96,8 @@ model Profile {
   User               User      @relation(fields: [userId], references: [id])
   userId             Int       @unique
   website            String?
+  workerStatus       WorkerStatus @default(indep)
+
 }
 
 //
@@ -268,6 +270,11 @@ model Domain {
 //
 // ─── TYPES ENUMS ───────────────────────────────────────────────────
 //
+
+enum WorkerStatus {
+  indep
+  salarie
+}
 
 enum DocumentType {
   ID_PHOTO

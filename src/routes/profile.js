@@ -146,6 +146,7 @@ const profile = await prisma.profile.upsert({
 
     res.status(200).json({
       isAdmin:      user.isAdmin,
+      memberStatus: user.memberStatus,
       profile:      user.Profile || {},
       address:      user.Profile?.Address || {},
       experiences:  user.Experiences || [],
@@ -188,6 +189,7 @@ router.get('/profil', async (req, res) => {
 
     res.json({
       isAdmin:      user.isAdmin,
+      memberStatus: user.memberStatus,
       profile:      user.Profile || {},
       address:      user.Profile?.Address || {},
       experiences:  user.Experiences || [],

@@ -97,6 +97,7 @@ model Profile {
   userId             Int       @unique
   website            String?
   workerStatus       WorkerStatus @default(indep)
+  memberStatus       MemberStatus?
 
 }
 

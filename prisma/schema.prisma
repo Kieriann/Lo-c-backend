@@ -271,6 +271,13 @@ model Domain {
 // ─── TYPES ENUMS ───────────────────────────────────────────────────
 //
 
+enum MemberStatus {
+  vip
+  membre
+  abonne
+}
+
+
 enum WorkerStatus {
   indep
   salarie

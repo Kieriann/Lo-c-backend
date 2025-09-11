@@ -1,6 +1,5 @@
 // scripts/db-count.js
-const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
+const prisma = require('../utils/prismaClient')
 
 const KEYS = [
   'User','Profile','Address','Experience','Prestation',

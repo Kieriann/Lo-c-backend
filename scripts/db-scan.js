@@ -1,6 +1,5 @@
 // loic-backend/scripts/db-scan.js
-const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
+const prisma = require('../utils/prismaClient')
 
 const mask = s => (s || '').replace(/:\/\/([^:]+):([^@]+)@/, '://***:***@')
 

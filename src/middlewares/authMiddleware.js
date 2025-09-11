@@ -1,28 +1,20 @@
 const jwt = require('jsonwebtoken')
 
-//
-// ─── Middleware d'authentification JWT ─────────────────────────────
-//
-
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization']
-  console.log('Header reçu :', authHeader)
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Token manquant ou mal formé' })
-  }
-
-  const token = authHeader.split(' ')[1]
-
+module.exports = function authenticate(req, res, next) {
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET)
-    console.log('Token décodé :', payload)
-    req.user = { id: payload.userId, isAdmin: payload.isAdmin, role: payload.role }
+    const h = req.headers['authorization'] || ''
+    const token = h.startsWith('Bearer ') ? h.slice(7) : null
+    if (!token) return res.status(401).json({ error: 'NO_TOKEN' })
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    req.user = {
+      userId : Number(decoded.userId),
+      role   : decoded.role,
+      isAdmin: !!decoded.isAdmin,
+    }
+    if (!req.user.userId) return res.status(401).json({ error: 'INVALID_TOKEN' })
     next()
-  } catch (err) {
-    console.log('Erreur jwt.verify :', err.message)
-    return res.status(401).json({ error: 'Token invalide' })
+  } catch (e) {
+    return res.status(401).json({ error: 'INVALID_TOKEN' })
   }
 }
-
-module.exports = authenticateToken

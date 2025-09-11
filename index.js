@@ -54,6 +54,10 @@ const resetPasswordRoutes = require('./src/routes/resetPassword')
 const realisationRoutes = require('./src/routes/realisations');
 const clientRequestsRouter = require('./src/routes/clientRequests.js')
 const citiesRouter = require('./src/routes/cities.js')
+const messageRoutes = require('./src/routes/message.js')
+const clientProfileRouter = require('./src/routes/clientProfile')
+
+
 
 
 
@@ -68,6 +72,9 @@ app.use('/api/reset-password', resetPasswordRoutes)
 app.use('/api/sponsor', require('./src/routes/sponsor'))
 app.use('/api/client/requests', clientRequestsRouter)
 app.use('/api/cities', citiesRouter)
+app.use('/api/messages', messageRoutes)
+app.use('/api/client/profile', clientProfileRouter)
+
 
 
 

@@ -1,8 +1,7 @@
 const express = require('express')
 const router  = express.Router()
 const multer  = require('multer')
-const { PrismaClient } = require('@prisma/client')
-const prisma  = new PrismaClient()
+const prisma = require('../utils/prismaClient')
 const authenticateToken = require('../middlewares/authMiddleware')
 const { uploadImage, uploadDocument, deleteFile } = require('../utils/cloudinary')
 
@@ -161,11 +160,11 @@ const profile = await prisma.profile.upsert({
 })
 
 /* ───── GET /api/profile/profil ─────────────────────────────────────────────────── */
-router.get('/profil', async (req, res) => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      include: {
+const authenticate = require('../middlewares/authMiddleware')
+router.get('/profil', authenticate, async (req, res) => {  try {
+const userId = Number(req.user.userId)
+const user = await prisma.user.findUnique({ where: { id: userId },
+        include: {
         Profile: {
           include: { Address: true }
         },

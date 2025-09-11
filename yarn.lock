@@ -2,9 +2,9 @@
 # yarn lockfile v1
 
 
-"@prisma/client@^6.8.2":
+"@prisma/client@6.8.2":
   version "6.8.2"
-  resolved "https://registry.npmjs.org/@prisma/client/-/client-6.8.2.tgz"
+  resolved "https://registry.yarnpkg.com/@prisma/client/-/client-6.8.2.tgz#f0af46643604cd38341f285483edc3c3ae7e6651"
   integrity sha512-5II+vbyzv4si6Yunwgkj0qT/iY0zyspttoDrL3R4BYgLdp42/d2C8xdi9vqkrYtKt9H32oFIukvyw3Koz5JoDg==
 
 "@prisma/config@6.8.2":
@@ -1042,9 +1042,9 @@ postgres-interval@^1.1.0:
   dependencies:
     xtend "^4.0.0"
 
-prisma@^6.8.2:
+prisma@6.8.2:
   version "6.8.2"
-  resolved "https://registry.npmjs.org/prisma/-/prisma-6.8.2.tgz"
+  resolved "https://registry.yarnpkg.com/prisma/-/prisma-6.8.2.tgz#5cd9e1635b6ed0e27ea3cf3ef31c648c55115a63"
   integrity sha512-JNricTXQxzDtRS7lCGGOB4g5DJ91eg3nozdubXze3LpcMl1oWwcFddrj++Up3jnRE6X/3gB/xz3V+ecBk/eEGA==
   dependencies:
     "@prisma/config" "6.8.2"

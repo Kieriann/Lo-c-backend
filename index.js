@@ -56,9 +56,7 @@ const clientRequestsRouter = require('./src/routes/clientRequests.js')
 const citiesRouter = require('./src/routes/cities.js')
 const messageRoutes = require('./src/routes/message.js')
 const clientProfileRouter = require('./src/routes/clientProfile')
-
-
-
+const suggestionsRouter = require('./src/routes/suggestions')
 
 
 // ─── Routes API ──────────────────────────────────────────────────────
@@ -74,6 +72,8 @@ app.use('/api/client/requests', clientRequestsRouter)
 app.use('/api/cities', citiesRouter)
 app.use('/api/messages', messageRoutes)
 app.use('/api/client/profile', clientProfileRouter)
+app.use('/api/suggestions', suggestionsRouter)
+
 
 
 

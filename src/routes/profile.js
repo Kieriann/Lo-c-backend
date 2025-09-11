@@ -3,7 +3,7 @@ const router  = express.Router()
 const multer  = require('multer')
 const prisma = require('../utils/prismaClient')
 const authenticateToken = require('../middlewares/authMiddleware')
-const { uploadImage, uploadDocument, deleteFile } = require('../utils/cloudinary')
+const { uploadImage, uploadDocument } = require('../utils/cloudinary')
 
 router.use(authenticateToken)
 
@@ -14,35 +14,36 @@ const safeParse = (str, fallback = {}) => {
   try { return JSON.parse(str ?? '') } catch { return fallback }
 }
 
-/* ───── POST /api/profile/profil ─────────────────────────────────────────────────── */
+/* ───── POST /api/profile/profil ─────────────────────────────────────────────── */
 router.post('/profil', upload.any(), async (req, res) => {
   try {
-    const userId = req.user.id
+    const userId = Number(req.user?.userId)
+    if (!userId) return res.status(401).json({ error: 'Non authentifié' })
+
     const profileData     = safeParse(req.body.profile)
     const addressData     = safeParse(req.body.address)
     const experiencesData = safeParse(req.body.experiences, [])
     const prestationsData = safeParse(req.body.prestations, [])
 
-// upsert du profil
-const { availableDate, workerStatus, ...restProfile } = profileData
-const availableDateParsed = availableDate ? new Date(availableDate) : undefined
-const workerStatusSafe = workerStatus === 'salarie' ? 'salarie' : 'indep'
+    // upsert du profil
+    const { availableDate, workerStatus, ...restProfile } = profileData
+    const availableDateParsed = availableDate ? new Date(availableDate) : undefined
+    const workerStatusSafe = workerStatus === 'salarie' ? 'salarie' : 'indep'
 
-const profile = await prisma.profile.upsert({
-  where:  { userId },
-  update: { 
-    ...restProfile, 
-    workerStatus: workerStatusSafe,
-    ...(availableDateParsed && { availableDate: availableDateParsed }) 
-  },
-  create: { 
-    ...restProfile, 
-    workerStatus: workerStatusSafe,
-    ...(availableDateParsed && { availableDate: availableDateParsed }), 
-    userId 
-  }
-})
-
+    const profile = await prisma.profile.upsert({
+      where:  { userId },
+      update: { 
+        ...restProfile,
+        workerStatus: workerStatusSafe,
+        ...(availableDateParsed && { availableDate: availableDateParsed })
+      },
+      create: { 
+        ...restProfile,
+        workerStatus: workerStatusSafe,
+        ...(availableDateParsed && { availableDate: availableDateParsed }),
+        userId
+      }
+    })
 
     // upsert de l'adresse
     await prisma.address.upsert({
@@ -121,21 +122,17 @@ const profile = await prisma.profile.upsert({
 
     // Rechargement du profil complet après tous les traitements
     const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
+      where: { id: userId },
       include: {
-        Profile: {
-          include: { Address: true }
-        },
+        Profile: { include: { Address: true } },
         Experiences: true,
         Prestations: true,
-        realisations: {
-          include: { files: true, technos: true }
-        }
+        realisations: { include: { files: true, technos: true } }
       }
     })
 
     const documents = await prisma.document.findMany({
-      where: { userId: user.id },
+      where: { userId },
       select: {
         id: true, type: true,
         originalName: true,
@@ -144,14 +141,14 @@ const profile = await prisma.profile.upsert({
     })
 
     res.status(200).json({
-      isAdmin:      user.isAdmin,
-      memberStatus: user.memberStatus,
-      profile:      user.Profile || {},
-      address:      user.Profile?.Address || {},
-      experiences:  user.Experiences || [],
-      prestations:  user.Prestations || [],
+      isAdmin:      user?.isAdmin,
+      memberStatus: user?.memberStatus,
+      profile:      user?.Profile || {},
+      address:      user?.Profile?.Address || {},
+      experiences:  user?.Experiences || [],
+      prestations:  user?.Prestations || [],
       documents,
-      realisations: user.realisations || []
+      realisations: user?.realisations || []
     })
   } catch (err) {
     console.error("ERREUR DANS L'UPLOAD DU PROFIL :", err)
@@ -159,26 +156,25 @@ const profile = await prisma.profile.upsert({
   }
 })
 
-/* ───── GET /api/profile/profil ─────────────────────────────────────────────────── */
-const authenticate = require('../middlewares/authMiddleware')
-router.get('/profil', authenticate, async (req, res) => {  try {
-const userId = Number(req.user.userId)
-const user = await prisma.user.findUnique({ where: { id: userId },
-        include: {
-        Profile: {
-          include: { Address: true }
-        },
+/* ───── GET /api/profile/profil ──────────────────────────────────────────────── */
+router.get('/profil', async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId)
+    if (!userId) return res.status(401).json({ error: 'Non authentifié' })
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        Profile: { include: { Address: true } },
         Experiences: true,
         Prestations: true,
-        realisations: {
-          include: { files: true, technos: true }
-        }
+        realisations: { include: { files: true, technos: true } }
       }
     })
     if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' })
 
     const documents = await prisma.document.findMany({
-      where: { userId: user.id },
+      where: { userId },
       select: {
         id: true, type: true,
         originalName: true,

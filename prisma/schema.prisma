@@ -53,6 +53,8 @@ model User {
   sentMessages           Message[]           @relation("SentMessages")
   receivedMessages       Message[]           @relation("ReceivedMessages")
   clientProfile          ClientProfile?
+  suggestions            Suggestion[]
+
 
 
 }
@@ -360,3 +362,20 @@ model ClientProfile {
   clientType       String?  @db.Text
 
 }
+
+enum SuggestionStatus {
+  PENDING
+  IN_REVIEW
+  DONE
+}
+
+model Suggestion {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String           @db.VarChar(150)
+  content   String
+  status    SuggestionStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+}
+

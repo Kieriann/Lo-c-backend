@@ -120,36 +120,36 @@ router.post('/profil', upload.any(), async (req, res) => {
       })
     }
 
-    // Rechargement du profil complet après tous les traitements
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        Profile: { include: { Address: true } },
-        Experiences: true,
-        Prestations: true,
-        realisations: { include: { files: true, technos: true } }
-      }
-    })
+    // rechargement du profil complet
+    res.set('Cache-Control', 'no-store')
 
-    const documents = await prisma.document.findMany({
-      where: { userId },
-      select: {
-        id: true, type: true,
-        originalName: true,
-        publicId: true, version: true, format: true
-      }
-    })
+    const profRow   = await prisma.profile.findUnique({ where: { userId }, select: { id: true } })
+    const profileId = profRow?.id || 0
+
+    const [userMeta, profileFull, address, experiences, prestations, realisations, documents] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true} }),
+      prisma.profile.findUnique({ where: { userId } }),
+      prisma.address.findUnique({ where: { profileId: profileId } }),
+      prisma.experience.findMany({ where: { userId } }),
+      prisma.prestation.findMany({ where: { userId } }),
+      prisma.realisation.findMany({ where: { userId }, include: { files: true, technos: true } }),
+      prisma.document.findMany({
+        where: { userId },
+        select: { id: true, type: true, originalName: true, publicId: true, version: true, format: true }
+      })
+    ])
 
     res.status(200).json({
-      isAdmin:      user?.isAdmin,
-      memberStatus: user?.memberStatus,
-      profile:      user?.Profile || {},
-      address:      user?.Profile?.Address || {},
-      experiences:  user?.Experiences || [],
-      prestations:  user?.Prestations || [],
+      isAdmin:      userMeta?.isAdmin || false,
+      memberStatus: userMeta?.memberStatus || null,
+      profile:      profileFull || {},
+      address:      address || {},
+      experiences,
+      prestations,
       documents,
-      realisations: user?.realisations || []
+      realisations
     })
+
   } catch (err) {
     console.error("ERREUR DANS L'UPLOAD DU PROFIL :", err)
     res.status(500).json({ error: 'Erreur serveur', details: err.message })
@@ -162,36 +162,51 @@ router.get('/profil', async (req, res) => {
     const userId = Number(req.user?.userId)
     if (!userId) return res.status(401).json({ error: 'Non authentifié' })
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        Profile: { include: { Address: true } },
-        Experiences: true,
-        Prestations: true,
-        realisations: { include: { files: true, technos: true } }
-      }
-    })
-    if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' })
+    res.set('Cache-Control', 'no-store')
 
-    const documents = await prisma.document.findMany({
-      where: { userId },
-      select: {
-        id: true, type: true,
-        originalName: true,
-        publicId: true, version: true, format: true
-      }
-    })
+    const [
+      userMeta,
+      profile,
+      experiences,
+      prestations,
+      realisations,
+      documents
+    ] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { isAdmin: true }
+      }),
+      prisma.profile.findUnique({
+        where: { userId },
+        include: { Address: true }
+      }),
+      prisma.experience.findMany({ where: { userId } }),
+      prisma.prestation.findMany({ where: { userId } }),
+      prisma.realisation.findMany({
+        where: { userId },
+        include: { files: true, technos: true }
+      }),
+      prisma.document.findMany({
+        where: { userId },
+        select: {
+          id: true, type: true,
+          originalName: true,
+          publicId: true, version: true, format: true
+        }
+      })
+    ])
 
     res.json({
-      isAdmin:      user.isAdmin,
-      memberStatus: user.memberStatus,
-      profile:      user.Profile || {},
-      address:      user.Profile?.Address || {},
-      experiences:  user.Experiences || [],
-      prestations:  user.Prestations || [],
+      isAdmin:      userMeta?.isAdmin || false,
+      memberStatus: null,
+      profile:      profile || {},
+      address:      profile?.Address || {},
+      experiences,
+      prestations,
       documents,
-      realisations: user.realisations || []
+      realisations
     })
+
   } catch (err) {
     console.error('Erreur GET /profil', err)
     res.status(500).json({ error: 'Erreur serveur', details: err.message })

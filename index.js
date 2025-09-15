@@ -73,6 +73,8 @@ app.use('/api/cities', citiesRouter)
 app.use('/api/messages', messageRoutes)
 app.use('/api/client/profile', clientProfileRouter)
 app.use('/api/suggestions', suggestionsRouter)
+app.use('/api/client/requests', require('./src/routes/clientRequests'))
+
 
 
 

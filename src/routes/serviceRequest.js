@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const prisma = require('../utils/prismaClient')
-const authenticate = require('../middlewares/authmiddleware')
+const authenticate = require('../middlewares/authMiddleware')
 
 
 // Créer une demande

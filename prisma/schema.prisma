@@ -20,6 +20,8 @@ model Address {
   postalCode String
   Profile    Profile? @relation(fields: [profileId], references: [id])
   profileId  Int      @unique
+  lat        Float?
+  lng        Float?
 }
 
 //
@@ -53,6 +55,8 @@ model User {
   receivedMessages       Message[]           @relation("ReceivedMessages")
   clientProfile          ClientProfile?
   suggestions            Suggestion[]
+  serviceRequestsOwned   ServiceRequest[]   @relation("UserServiceRequests")
+  shortlistsAsCandidate  ServiceShortlist[] @relation("UserShortlistCandidate")
 
 
 
@@ -264,6 +268,55 @@ model Domain {
   Application Application[]
 }
 
+
+model ServiceRequest {
+  id           Int                 @id @default(autoincrement())
+  ownerId      Int
+  owner        User                @relation("UserServiceRequests", fields: [ownerId], references: [id], onDelete: Cascade)
+  title        String              @default("")
+  description  String
+  minRate      Int                 // prix min en €/jour
+  maxRate      Int                 // prix max en €/jour
+  deadline     DateTime?
+  status       ServiceRequestStatus @default(DRAFT)
+  items        ServiceRequestItem[]
+  shortlist    ServiceShortlist[]
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}
+
+model ServiceRequestItem {
+  id               Int             @id @default(autoincrement())
+  serviceRequestId Int
+  serviceRequest   ServiceRequest  @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  skillLabel       String          // "React", "Photoshop", ...
+  level            String          // "junior" | "intermédiaire" | "expert"
+}
+
+model ServiceShortlist {
+  id               Int             @id @default(autoincrement())
+  serviceRequestId Int
+  serviceRequest   ServiceRequest  @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  candidateId      Int
+  candidate        User            @relation("UserShortlistCandidate", fields: [candidateId], references: [id], onDelete: Cascade)
+  status           ShortlistStatus @default(PENDING)
+  createdAt        DateTime        @default(now())
+
+  @@unique([serviceRequestId, candidateId])
+}
+
+enum ServiceRequestStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+enum ShortlistStatus {
+  PENDING
+  CONTACTED
+  REJECTED
+}
+
 //
 // ─── TYPES ENUMS ───────────────────────────────────────────────────
 //
@@ -296,9 +349,16 @@ enum Role {
   ADMIN
 }
 
-enum RequestKind {
-  EXPERTISE
-  MISSION
+ enum RequestKind {
+   EXPERTISE
+   MISSION
+   PREEMBAUCHE
+   ALTERNANCE
+ }
+
+ enum AlternanceRemuMode {
+  BAREME
+  SUPERIEURE
 }
 
 enum Level {
@@ -319,23 +379,51 @@ model City {
   countryCode    String
   createdAt      DateTime        @default(now())
   clientRequests ClientRequest[]
+  lat            Float?
+  lng            Float?
 
   @@index([name])
 }
 
 model ClientRequest {
-  id           Int          @id @default(autoincrement())
-  kind         RequestKind
-  technology   String
-  level        Level
-  locationMode LocationMode
-  cityId       Int?
-  city         City?        @relation(fields: [cityId], references: [id])
-  citySnapshot String? // "Paris, FR" au moment de la demande
-  userId       Int
-  createdBy    User         @relation(fields: [userId], references: [id])
-  createdAt    DateTime     @default(now())
+  id               Int                 @id @default(autoincrement())
+  kind             RequestKind         @default(MISSION)
+  userId           Int
+  client           User                @relation(fields: [userId], references: [id])
+  cityId           Int?
+  city             City?               @relation(fields: [cityId], references: [id])
+  citySnapshot     String?
+  createdAt        DateTime            @default(now())
+  tjmMin           Int?
+  tjmMax           Int?
+  tjmWeight        Int?                @default(0)
+
+  locationMode     LocationMode        @default(REMOTE)
+  locationWeight   Int?                @default(0)
+  remoteDaysCount  Int?                @default(0)
+
+  expertiseSkill        String?    
+  expertiseLevel        String?    
+  expertiseDuration     String?    
+  expertiseMode         String?    
+  expertiseObjective    String?    
+
+  prehireJobTitle       String?
+  prehireContractType   String?    
+  prehireTrialPeriod    String?    
+  prehireSkills         String?    
+  prehireWorkplace      String?    
+  prehireCompensation   String?  
+
+  alternanceJobTitle     String?
+  alternanceDescription  String?
+  alternanceRemuMode     AlternanceRemuMode?
+  alternanceRemuAmount   Int?
+
+  technologies     ClientRequestTechnology[]
 }
+
+
 
 model ClientProfile {
   id               Int     @id @default(autoincrement())
@@ -378,3 +466,17 @@ model Suggestion {
   createdAt DateTime         @default(now())
 }
 
+model ClientRequestTechnology {
+  id        Int            @id @default(autoincrement())
+  requestId Int
+  request   ClientRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  technology String
+  level      Level         @default(JUNIOR)
+  weight     Int           @default(0)
+
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+  

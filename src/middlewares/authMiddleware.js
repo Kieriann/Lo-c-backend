@@ -7,14 +7,16 @@ module.exports = function authenticate(req, res, next) {
     if (!token) return res.status(401).json({ error: 'NO_TOKEN' })
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const id = Number(decoded.userId)
     req.user = {
-      userId : Number(decoded.userId),
-      role   : decoded.role,
+      id,            
+      userId: id,    
+      role: decoded.role,
       isAdmin: !!decoded.isAdmin,
     }
-    if (!req.user.userId) return res.status(401).json({ error: 'INVALID_TOKEN' })
+    if (!req.user.id) return res.status(401).json({ error: 'INVALID_TOKEN' })
     next()
-  } catch (e) {
+  } catch {
     return res.status(401).json({ error: 'INVALID_TOKEN' })
   }
 }

@@ -1,152 +1,234 @@
-const express = require('express')
-const router = express.Router()
+const router = require('express').Router()
 const prisma = require('../utils/prismaClient')
-const auth = require('../middlewares/authMiddleware')
+const requireAuth = require('../middlewares/authMiddleware')
 
-// POST /api/client/requests
-router.post('/', auth, async (req, res, next) => {
-  try {
-    const { kind, technology, level, location } = req.body
-    if (!kind || !technology || !level || !location?.mode) {
-      return res.status(400).json({ error: 'Champs manquants' })
-    }
-
-    const kindEnum = kind === 'mission' ? 'MISSION' : 'EXPERTISE'
-    const levelEnum =
-      level === 'expert' ? 'EXPERT' : level === 'medium' ? 'MEDIUM' : 'JUNIOR'
-
-    let locationMode, cityId = null, citySnapshot = null
-
-    if (location.mode === 'remote') {
-      locationMode = 'REMOTE'
-    } else if (location.mode === 'onsite') {
-      locationMode = 'ONSITE'
-      if (!location.city || (!location.city.id && !location.city.name)) {
-        return res.status(400).json({ error: 'Ville requise' })
-      }
-      if (location.city.id) {
-        const c = await prisma.city.findUnique({ where: { id: Number(location.city.id) } })
-        if (!c) return res.status(400).json({ error: 'Ville inconnue' })
-        cityId = c.id
-        citySnapshot = `${c.name}, ${c.countryCode}`
-      } else {
-        // fallback si on reçoit juste name/country
-        citySnapshot = `${location.city.name}${location.city.country ? ', ' + location.city.country : ''}`
-      }
-    } else {
-      return res.status(400).json({ error: 'Mode localisation invalide' })
-    }
-
- if (!req.user?.userId) return res.status(401).json({ error: 'Non authentifié' })
-
-
-const data = {
-  kind: kindEnum,
-  technology: technology.trim(),
-  level: levelEnum,
-  locationMode,
-  citySnapshot,
-  status: 'IN_PROGRESS',
-  createdBy: { connect: { id: req.user.userId } },
-  ...(cityId ? { city: { connect: { id: cityId } } } : {}),
+// map front -> enum prisma
+const kindMap = {
+  expertise: 'EXPERTISE',
+  mission: 'MISSION',
+  preembauche: 'PREEMBAUCHE',
+  alternance: 'ALTERNANCE',
 }
-const created = await prisma.clientRequest.create({ data, select: { id: true } })
 
-
-    res.json(created)
-  } catch (err) {
-    next(err)
+// GET /api/client-requests (liste du client courant)
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const rows = await prisma.clientRequest.findMany({
+      where: { userId: req.user.userId },
+      include: {
+        city: true,
+        technologies: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json(rows)
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur liste demandes' })
   }
 })
 
-// GET /api/client/requests/:id
-router.get('/:id', auth, async (req, res, next) => {
+// GET /api/client-requests/:id
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const id = Number(req.params.id)
-    if (!id) return res.status(400).json({ error: 'Bad id' })
-    const row = await prisma.clientRequest.findUnique({
-      where: { id },
-      include: { city: true },
+    const row = await prisma.clientRequest.findFirst({
+      where: { id, userId: req.user.userId },
+      include: { city: true, technologies: true },
     })
-    if (!row || row.userId !== req.user.userId) return res.status(404).json({ error: 'Not found' })
+    if (!row) return res.status(404).json({ error: 'Introuvable' })
     res.json(row)
-  } catch (err) { next(err) }
+  } catch {
+    res.status(500).json({ error: 'Erreur lecture' })
+  }
 })
 
-// PUT /api/client/requests/:id
-router.put('/:id', auth, async (req, res, next) => {
+// POST /api/client-requests
+router.post('/', requireAuth, async (req, res) => {
   try {
-    const id = Number(req.params.id)
-    if (!id) return res.status(400).json({ error: 'Bad id' })
+    const {
+      kind, // 'expertise' | 'mission' | 'preembauche' | 'alternance'
+      tjmMin, tjmMax, tjmWeight,
+      location, // { mode:'remote'|'onsite', city?, days?, weight? }
+      technologies = [], // [{ technology, level, weight }]
 
-    const existing = await prisma.clientRequest.findUnique({ where: { id } })
-    if (!existing || existing.userId !== req.user.userId) return res.status(404).json({ error: 'Not found' })
+      // Expertise
+      expertiseObjective,
+      expertiseDuration,
 
-    const { kind, technology, level, location } = req.body
-    if (!kind || !technology || !level || !location?.mode) {
-      return res.status(400).json({ error: 'Champs manquants' })
-    }
+      // Pré-embauche
+      prehireJobTitle,
+      prehireContractType,
+      prehireTrialPeriod,
+      prehireCompensation,
 
-    const kindEnum  = kind === 'mission' ? 'MISSION' : 'EXPERTISE'
-    const levelEnum = level === 'expert' ? 'EXPERT' : level === 'medium' ? 'MEDIUM' : 'JUNIOR'
+      // Alternance
+      alternanceJobTitle,
+      alternanceDescription,
+      alternanceRemuMode,   // 'BAREME' | 'SUPERIEURE'
+      alternanceRemuAmount, // number (annuel brut)
+    } = req.body || {}
 
-    let locationMode, cityId = null, citySnapshot = null
-    if (location.mode === 'remote') {
-      locationMode = 'REMOTE'
-    } else if (location.mode === 'onsite') {
-      locationMode = 'ONSITE'
-      if (location.city?.id) {
-        const c = await prisma.city.findUnique({ where: { id: Number(location.city.id) } })
-        if (!c) return res.status(400).json({ error: 'Ville inconnue' })
-        cityId = c.id
-        citySnapshot = `${c.name}, ${c.countryCode}`
-      } else if (location.city?.name) {
-        citySnapshot = `${location.city.name}${location.city.country ? ', ' + location.city.country : ''}`
-      } else {
-        return res.status(400).json({ error: 'Ville requise' })
-      }
-    } else {
-      return res.status(400).json({ error: 'Mode localisation invalide' })
-    }
+    const kindUpper = kindMap[kind] || 'EXPERTISE'
 
     const data = {
-      kind: kindEnum,
-      technology: technology.trim(),
-      level: levelEnum,
-      locationMode,
-      citySnapshot,
-      city: cityId ? { connect: { id: cityId } } : undefined,
+      userId: req.user.userId,
+      kind: kindUpper,
+      tjmMin: tjmMin ?? null,
+      tjmMax: tjmMax ?? null,
+      tjmWeight: Number.isFinite(Number(tjmWeight)) ? Number(tjmWeight) : 0,
+      locationMode: (location?.mode === 'onsite') ? 'ONSITE' : 'REMOTE',
+      locationWeight: Number.isFinite(Number(location?.weight)) ? Number(location.weight) : 0,
+      remoteDaysCount: (location?.mode === 'remote')
+        ? Math.max(1, Math.min(5, Number(location?.days) || 1))
+        : 0,
+      city: (location?.mode === 'onsite' && location?.city?.id)
+        ? { connect: { id: Number(location.city.id) } }
+        : undefined,
+
+      // Champs conditionnels
+      ...(kindUpper === 'EXPERTISE' ? {
+        expertiseObjective: expertiseObjective ?? null,
+        expertiseDuration: expertiseDuration ?? null,
+      } : {}),
+
+      ...(kindUpper === 'PREEMBAUCHE' ? {
+        prehireJobTitle: prehireJobTitle ?? null,
+        prehireContractType: prehireContractType ?? null,
+        prehireTrialPeriod: prehireTrialPeriod ?? null,
+        prehireCompensation: prehireCompensation ?? null,
+      } : {}),
+
+      ...(kindUpper === 'ALTERNANCE' ? {
+        alternanceJobTitle: alternanceJobTitle ?? null,
+        alternanceDescription: alternanceDescription ?? null,
+        alternanceRemuMode: (alternanceRemuMode === 'SUPERIEURE') ? 'SUPERIEURE' : 'BAREME',
+        alternanceRemuAmount: (alternanceRemuMode === 'SUPERIEURE')
+          ? (Number(alternanceRemuAmount) || null)
+          : null,
+      } : {}),
+
+      technologies: {
+        create: technologies
+          .filter(t => (t.technology || '').trim())
+          .map(t => ({
+            technology: t.technology.trim(),
+            level: String(t.level || 'junior').toUpperCase(), // JUNIOR|MEDIUM|EXPERT
+            weight: Number.isFinite(Number(t.weight)) ? Number(t.weight) : 0,
+          })),
+      },
+    }
+
+    const created = await prisma.clientRequest.create({
+      data,
+      include: { city: true, technologies: true },
+    })
+    res.json({ id: created.id })
+  } catch (e) {
+    console.error('POST /client-requests failed:', e)
+    res.status(500).json({ error: e?.meta?.cause || e?.message || 'Erreur création' })
+  }
+})
+
+// PUT /api/client-requests/:id
+router.put('/:id', requireAuth, async (req, res) => {
+  const id = Number(req.params.id)
+  try {
+    const {
+      kind,
+      tjmMin, tjmMax, tjmWeight,
+      location,
+      technologies = [],
+
+      // Expertise
+      expertiseObjective,
+      expertiseDuration,
+
+      // Pré-embauche
+      prehireJobTitle,
+      prehireContractType,
+      prehireTrialPeriod,
+      prehireCompensation,
+
+      // Alternance
+      alternanceJobTitle,
+      alternanceDescription,
+      alternanceRemuMode,
+      alternanceRemuAmount,
+    } = req.body || {}
+
+    const kindUpper = kindMap[kind] || 'EXPERTISE'
+
+    const dataBase = {
+      kind: kindUpper,
+      tjmMin: tjmMin ?? null,
+      tjmMax: tjmMax ?? null,
+      tjmWeight: Number.isFinite(Number(tjmWeight)) ? Number(tjmWeight) : 0,
+      locationMode: (location?.mode === 'onsite') ? 'ONSITE' : 'REMOTE',
+      locationWeight: Number.isFinite(Number(location?.weight)) ? Number(location.weight) : 0,
+      remoteDaysCount: (location?.mode === 'remote')
+        ? Math.max(1, Math.min(5, Number(location?.days) || 1))
+        : 0,
+      city: (location?.mode === 'onsite' && location?.city?.id)
+        ? { connect: { id: Number(location.city.id) } }
+        : { disconnect: true },
+
+      // On nettoie systématiquement les champs spécifiques, puis on remet ceux du kind
+      expertiseObjective: null,
+      expertiseDuration: null,
+      prehireJobTitle: null,
+      prehireContractType: null,
+      prehireTrialPeriod: null,
+      prehireCompensation: null,
+      alternanceJobTitle: null,
+      alternanceDescription: null,
+      alternanceRemuMode: null,
+      alternanceRemuAmount: null,
+    }
+
+    if (kindUpper === 'EXPERTISE') {
+      dataBase.expertiseObjective = expertiseObjective ?? null
+      dataBase.expertiseDuration = expertiseDuration ?? null
+    } else if (kindUpper === 'PREEMBAUCHE') {
+      dataBase.prehireJobTitle = prehireJobTitle ?? null
+      dataBase.prehireContractType = prehireContractType ?? null
+      dataBase.prehireTrialPeriod = prehireTrialPeriod ?? null
+      dataBase.prehireCompensation = prehireCompensation ?? null
+    } else if (kindUpper === 'ALTERNANCE') {
+      dataBase.alternanceJobTitle = alternanceJobTitle ?? null
+      dataBase.alternanceDescription = alternanceDescription ?? null
+      dataBase.alternanceRemuMode = (alternanceRemuMode === 'SUPERIEURE') ? 'SUPERIEURE' : 'BAREME'
+      dataBase.alternanceRemuAmount = (alternanceRemuMode === 'SUPERIEURE')
+        ? (Number(alternanceRemuAmount) || null)
+        : null
     }
 
     const updated = await prisma.clientRequest.update({
       where: { id },
-      data,
-      select: { id: true },
+      data: {
+        ...dataBase,
+        technologies: {
+          deleteMany: {}, // reset
+          create: technologies
+            .filter(t => (t.technology || '').trim())
+            .map(t => ({
+              technology: t.technology.trim(),
+              level: String(t.level || 'junior').toUpperCase(),
+              weight: Number.isFinite(Number(t.weight)) ? Number(t.weight) : 0,
+            })),
+        },
+      },
+      include: { city: true, technologies: true },
     })
-    res.json(updated)
-  } catch (err) { next(err) }
-})
 
+    // sécurité: appartenance
+    if (updated.userId !== req.user.userId) {
+      return res.status(403).json({ error: 'Interdit' })
+    }
 
-// GET /api/client/requests
-router.get('/', auth, async (req, res, next) => {
-  try {
-    if (!req.user?.userId) return res.status(401).json({ error: 'Non authentifié' })
-
-const rows = await prisma.clientRequest.findMany({
-  where: { userId: req.user.userId },
-  orderBy: { createdAt: 'desc' },
-})
-
-
-    res.json(rows)
-  } catch (err) {
-    next(err)
+    res.json({ id: updated.id })
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur mise à jour' })
   }
 })
-
-
-
-
 
 module.exports = router

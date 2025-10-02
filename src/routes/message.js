@@ -17,7 +17,7 @@ router.post('/', authenticate, async (req, res) => {
     const message = await prisma.message.create({
       data: {
         senderId: req.user.id,
-        receiverId: receiver, // <- utilisation de "receiver" parsé
+        receiverId: receiver,
         content,
       },
     })
@@ -28,48 +28,62 @@ router.post('/', authenticate, async (req, res) => {
 })
 
 /**
- * Récupérer la conversation avec un utilisateur + marquer reçus comme lus
+ * Liste des fils (autres interlocuteurs) avec dernier message + non lus
  */
-router.get('/:otherId', authenticate, async (req, res) => {
-  if (!req.user?.id) return res.status(401).json({ error: 'Non authentifié' })
-
-  const otherId = parseInt(req.params.otherId, 10)
-  if (!otherId) return res.status(400).json({ error: 'otherId invalide' })
+router.get('/threads', authenticate, async (req, res) => {
+  const me = req.user.id
 
   try {
-const messages = await prisma.message.findMany({
-  where: {
-    OR: [
-      { senderId: req.user.id, receiverId: otherId },
-      { senderId: otherId, receiverId: req.user.id },
-    ],
-  },
-  orderBy: { createdAt: 'asc' },
-  include: {
-    sender: {
-      select: {
-        id: true,
-        profile: { select: { workerStatus: true } },
+    const last50 = await prisma.message.findMany({
+      where: {
+        OR: [{ senderId: me }, { receiverId: me }],
       },
-    },
-  },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    })
+
+    const unreadByOther = await prisma.message.groupBy({
+      by: ['senderId'],
+      where: { receiverId: me, isRead: false },
+      _count: { senderId: true },
+    })
+    const unreadMap = new Map(unreadByOther.map(u => [u.senderId, u._count.senderId]))
+
+    const map = new Map()
+    for (const m of last50) {
+      const other = m.senderId === me ? m.receiverId : m.senderId
+      if (!map.has(other)) {
+        map.set(other, {
+          otherId: other,
+          lastMessage: m,
+          unread: unreadMap.get(other) || 0,
+        })
+      }
+    }
+
+    res.json(Array.from(map.values()))
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la récupération des threads' })
+  }
 })
 
-    // Marquer comme lus les messages reçus non lus
-    await prisma.message.updateMany({
+/**
+ * Compter les non lus du user connecté
+ */
+router.get('/unread/count', authenticate, async (req, res) => {
+  if (!req.user?.id) return res.status(401).json({ error: 'Non authentifié' })
+
+  try {
+    const count = await prisma.message.count({
       where: {
-        senderId: otherId,
         receiverId: req.user.id,
         isRead: false,
       },
-      data: { isRead: true },
     })
-
-    res.json(messages)
-} catch (error) {
-  console.error('GET /api/messages/:otherId failed:', error)
-  res.status(500).json({ error: 'Erreur lors de la récupération des messages' })
-}
+    res.json({ unreadCount: count })
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors du comptage des messages non lus' })
+  }
 })
 
 /**
@@ -93,21 +107,46 @@ router.patch('/:id/read', authenticate, async (req, res) => {
 })
 
 /**
- * Compter les non lus du user connecté
+ * Récupérer la conversation avec un utilisateur + marquer reçus comme lus
  */
-router.get('/unread/count', authenticate, async (req, res) => {
+router.get('/:otherId', authenticate, async (req, res) => {
   if (!req.user?.id) return res.status(401).json({ error: 'Non authentifié' })
 
+  const otherId = parseInt(req.params.otherId, 10)
+  if (!otherId) return res.status(400).json({ error: 'otherId invalide' })
+
   try {
-    const count = await prisma.message.count({
+    const messages = await prisma.message.findMany({
       where: {
+        OR: [
+          { senderId: req.user.id, receiverId: otherId },
+          { senderId: otherId, receiverId: req.user.id },
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            Profile: { select: { workerStatus: true } },
+          },
+        },
+      },
+    })
+
+    await prisma.message.updateMany({
+      where: {
+        senderId: otherId,
         receiverId: req.user.id,
         isRead: false,
       },
+      data: { isRead: true },
     })
-    res.json({ unreadCount: count })
+
+    res.json(messages)
   } catch (error) {
-    res.status(500).json({ error: 'Erreur lors du comptage des messages non lus' })
+    console.error('GET /api/messages/:otherId failed:', error)
+    res.status(500).json({ error: 'Erreur lors de la récupération des messages' })
   }
 })
 

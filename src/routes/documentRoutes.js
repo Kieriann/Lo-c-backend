@@ -64,6 +64,16 @@ router.get('/count-cv-profiles', async (_req, res, next) => {
     next(err)
   }
 })
+// ─── Compter TOUS les profils créés ─────────────────────────────────
+router.get('/count-profiles', async (_req, res, next) => {
+  try {
+    const count = await prisma.profile.count()
+    res.json({ count })
+  } catch (err) {
+    next(err)
+  }
+})
+
 
 
 module.exports = router

@@ -3,6 +3,43 @@ const prisma = require('../utils/prismaClient')
 const requireAuth = require('../middlewares/authMiddleware')
 const { geocodeCity } = require('../utils/geocode')
 
+// ── Niveaux & similarités ───────────────────────────────────────────
+const LEVEL_ORDER = ['beginner','junior','medium','intermediate','senior','expert']
+const LEVEL_CENTERS = { beginner:0.1, junior:0.33, intermediate:0.5, medium:0.66, senior:0.85, expert:1 }
+
+const normLevel = (v) => String(v || '').toLowerCase().trim()
+const levelIndex = (v) => {
+  if (!v) return -1
+  const i = LEVEL_ORDER.indexOf(String(v).toLowerCase())
+  return i === -1 ? -1 : i
+}
+const levelSimilarity = (requested, found) => {
+  const r = levelIndex(requested), f = levelIndex(found)
+  if (r === -1 || f === -1) return 0
+  const gap = Math.abs(r - f)
+  return [1,0.85,0.65,0.45,0.25,0.1][Math.min(gap,5)]
+}
+
+// Numérique (0..1) <-> libellé
+const levelToNum = (lv) => {
+  const s = normLevel(lv)
+  if (s === 'expert') return 1
+  if (s === 'senior') return 0.85
+  if (s === 'medium') return 0.66
+  if (s === 'intermediaire' || s === 'intermédiaire' || s === 'intermediate') return 0.5
+  if (s === 'junior') return 0.33
+  if (s === 'beginner' || s === 'debutant' || s === 'débutant') return 0.1
+  const n = Number(lv)
+  return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0.5
+}
+const numToNearestLevel = (x) => {
+  let best = 'medium', bestD = Infinity
+  for (const [k, v] of Object.entries(LEVEL_CENTERS)) {
+    const d = Math.abs(x - v)
+    if (d < bestD) { bestD = d; best = k }
+  }
+  return best
+}
 
 /**
  * POST /api/shortlist/compute
@@ -32,8 +69,12 @@ router.post('/compute', requireAuth, async (req, res) => {
         tjmMin: cr.tjmMin ?? null,
         tjmMax: cr.tjmMax ?? null,
         startDate: null,
-        // si tu veux activer Cas 1: mapper aussi technologies -> {name, level, weight}
-        technologies: [],
+        // technologies: [{ name, level, weight }]
+        technologies: (cr.technologies || []).map(t => ({
+          name: t.name,
+          level: t.level,
+          weight: t.weight ?? 1,
+        })),
       }
 
       weights = {
@@ -50,79 +91,69 @@ router.post('/compute', requireAuth, async (req, res) => {
       weights.location ??= 2
       weights.availability ??= 2
     }
-const norm = s => String(s || '')
-  .normalize('NFD').replace(/\p{Diacritic}/gu, '')
-  .toLowerCase().trim()
 
-  // anti-429 : cache et budget par requête
-const reqGeoCache = new Map() // key: "city|CC" -> {lat,lng,countryCode}
-let geoBudget = 3             // max géocodages externes par calcul
+    const norm = s => String(s || '')
+      .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+      .toLowerCase().trim()
 
+    // anti-429 : cache et budget par requête
+    const reqGeoCache = new Map() // key: "city|CC" -> {lat,lng,countryCode}
+    let geoBudget = 3             // max géocodages externes par calcul
 
     // 1.5) Charger villes pour géolocalisation
-const cities = await prisma.city.findMany()
-const cityById = new Map(cities.map(c => [c.id, c]))
-const cityByKey = new Map(
-  cities.map(c => [`${norm(c.name)}|${(c.countryCode || '').toUpperCase()}`, c])
-)
-
+    const cities = await prisma.city.findMany()
+    const cityById = new Map(cities.map(c => [c.id, c]))
+    const cityByKey = new Map(
+      cities.map(c => [`${norm(c.name)}|${(c.countryCode || '').toUpperCase()}`, c])
+    )
 
     // 2) Charger candidats
-    const candidates = await prisma.profile.findMany({
+const candidates = await prisma.profile.findMany({
+  include: {
+    Address: true,
+    User: {
       include: {
-        Address: true,
-        User: {
-          include: {
-            Experiences: { include: { domainsList: true } },
-            realisations: { include: { technos: true } },
-            Prestations: true,
-          }
-        }
+        Experiences: { include: { domainsList: true } },
+        realisations: { include: { technos: true } },
+        Prestations: true,
       }
-    })
+    }
+  }
+})
+
+
 
     // 3) Helpers
-const safeWeight = w => Math.max(1, Number(w) || 1)
+    const safeWeight = w => Math.max(1, Number(w) || 1)
 
+    const toRad = d => (d * Math.PI) / 180
+    const haversineKm = (lat1, lon1, lat2, lon2) => {
+      const R = 6371
+      const dLat = toRad(lat2 - lat1)
+      const dLon = toRad(lon2 - lon1)
+      const a =
+        Math.sin(dLat/2)**2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2
+      return 2 * R * Math.asin(Math.sqrt(a))
+    }
 
-  const toRad = d => (d * Math.PI) / 180
-const haversineKm = (lat1, lon1, lat2, lon2) => {
-  const R = 6371
-  const dLat = toRad(lat2 - lat1)
-  const dLon = toRad(lon2 - lon1)
-  const a =
-    Math.sin(dLat/2)**2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2
-  return 2 * R * Math.asin(Math.sqrt(a))
-}
+    const getFromMap = (map, name) => {
+      const n = norm(name)
+      let v = map.get(n) || 0
+      for (const [k, val] of map) {
+        if (k.includes(n) || n.includes(k)) v = Math.max(v, val)
+      }
+      return v
+    }
 
-const getFromMap = (map, name) => {
-  const n = norm(name)
-  let v = map.get(n) || 0
-  for (const [k, val] of map) {
-    if (k.includes(n) || n.includes(k)) v = Math.max(v, val)
-  }
-  return v
-}
-
-const getPrestationTechMap = (p) => {
-  const map = new Map()
-  for (const pr of (p.User?.Prestations || [])) {
-    const k = norm(pr.tech)
-    if (!k) continue
-    map.set(k, Math.max(map.get(k) || 0, levelToNum(pr.level)))
-  }
-  return map
-}
-
-
-    const levelToNum = (lv) => {
-      const s = String(lv || '').toLowerCase()
-      if (s === 'expert') return 1
-      if (s === 'medium' || s === 'intermediaire' || s === 'intermédiaire') return 0.66
-      if (s === 'junior') return 0.33
-      const n = Number(lv)
-      return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0.5
+    const getPrestationTechMap = (p) => {
+      const map = new Map()
+      for (const pr of (p.User?.Prestations || [])) {
+        const k = norm(pr.tech)
+        if (!k) continue
+        map.set(k, Math.max(map.get(k) || 0, levelToNum(pr.level)))
+      }
+      return map
     }
 
     const getPrestationLevel = (p, name) => {
@@ -134,70 +165,66 @@ const getPrestationTechMap = (p) => {
     }
 
     const resolveCandidateCity = (p) => {
-  const name = norm(p.Address?.city)
-  const cc   = (p.Address?.country || '').toUpperCase()
-  if (!name) return null
-  return cityByKey.get(`${name}|${cc}`) || null
-}
+      const name = norm(p.Address?.city)
+      const cc   = (p.Address?.country || '').toUpperCase()
+      if (!name) return null
+      return cityByKey.get(`${name}|${cc}`) || null
+    }
 
+    const ensureCityCoords = async (city) => {
+      if (!city) return null
+      if (city.lat != null && city.lng != null) return city
+      let hit = null
+      try { hit = await geocodeCity(city.name, city.countryCode) } catch { hit = null }
+      if (!hit) return city
+      try {
+        return await prisma.city.update({
+          where: { id: city.id },
+          data: { lat: hit.lat, lng: hit.lng },
+        })
+      } catch {
+        return { ...city, lat: hit.lat, lng: hit.lng }
+      }
+    }
 
-const ensureCityCoords = async (city) => {
-  if (!city) return null
-  if (city.lat != null && city.lng != null) return city
-  let hit = null
-  try { hit = await geocodeCity(city.name, city.countryCode) } catch { hit = null }
-  if (!hit) return city
-  try {
-    return await prisma.city.update({
-      where: { id: city.id },
-      data: { lat: hit.lat, lng: hit.lng },
-    })
-  } catch {
-    return { ...city, lat: hit.lat, lng: hit.lng }
-  }
-}
+    const resolveCandidateCoords = async (p) => {
+      const name = norm(p.Address?.city)
+      const cc   = (p.Address?.country || '').toUpperCase()
+      if (!name) return null
 
+      const known = cityByKey.get(`${name}|${cc}`) || null
+      if (known) return await ensureCityCoords(known)
 
-const resolveCandidateCoords = async (p) => {
-  const name = norm(p.Address?.city)
-  const cc   = (p.Address?.country || '').toUpperCase()
-  if (!name) return null
+      const k = `${name}|${cc}`
+      if (reqGeoCache.has(k)) return reqGeoCache.get(k)
+      if (geoBudget <= 0) return null
+      geoBudget--
 
-  const known = cityByKey.get(`${name}|${cc}`) || null
-  if (known) return await ensureCityCoords(known)
+      let hit = null
+      try { hit = await geocodeCity(name, cc) } catch { hit = null }
+      const res = hit ? { lat: hit.lat, lng: hit.lng, countryCode: cc } : null
+      reqGeoCache.set(k, res)
+      return res
+    }
 
-  const k = `${name}|${cc}`
-  if (reqGeoCache.has(k)) return reqGeoCache.get(k)
-  if (geoBudget <= 0) return null
-  geoBudget--
+    const locationComponentByDistance = async (p, criteria) => {
+      if (criteria.remote) return 0.8
+      const req0 = criteria.cityId ? cityById.get(criteria.cityId) : null
+      const req  = await ensureCityCoords(req0)
+      if (!req?.lat || !req?.lng) return 0.5
 
-  let hit = null
-  try { hit = await geocodeCity(name, cc) } catch { hit = null }
-  const res = hit ? { lat: hit.lat, lng: hit.lng, countryCode: cc } : null
-  reqGeoCache.set(k, res)
-  return res
-}
+      const cand = await resolveCandidateCoords(p)
+      if (!cand?.lat || !cand?.lng) return 0.2
 
-
-const locationComponentByDistance = async (p, criteria) => {
-  if (criteria.remote) return 0.8
-  const req0 = criteria.cityId ? cityById.get(criteria.cityId) : null
-  const req  = await ensureCityCoords(req0)
-  if (!req?.lat || !req?.lng) return 0.5
-
-  const cand = await resolveCandidateCoords(p)
-  if (!cand?.lat || !cand?.lng) return 0.2
-
-  const d = haversineKm(req.lat, req.lng, cand.lat, cand.lng)
-  if (d <= 15)  return 1
-  if (d <= 50)  return 0.9
-  if (d <= 150) return 0.8
-  if (d <= 300) return 0.7
-  if (d <= 600) return 0.5
-  if ((req.countryCode || '') === (cand.countryCode || '')) return 0.3
-  return 0.1
-}
-
+      const d = haversineKm(req.lat, req.lng, cand.lat, cand.lng)
+      if (d <= 15)  return 1
+      if (d <= 50)  return 0.9
+      if (d <= 150) return 0.8
+      if (d <= 300) return 0.7
+      if (d <= 600) return 0.5
+      if ((req.countryCode || '') === (cand.countryCode || '')) return 0.3
+      return 0.1
+    }
 
     // Expériences: Domain.name → niveau (fallback prestations sinon 0.66)
     const getExpTechMap = (p) => {
@@ -244,16 +271,16 @@ const locationComponentByDistance = async (p, criteria) => {
       return 0.2
     }
 
-const availabilityText = (p) => {
-  const d = p.availableDate ? new Date(p.availableDate) : null
-  if (d && d.getTime() > Date.now()) {
-    const dd = String(d.getDate()).padStart(2,'0')
-    const mm = String(d.getMonth()+1).padStart(2,'0')
-    const yy = d.getFullYear()
-    return `${dd}/${mm}/${yy}`
-  }
-  return 'oui'
-}
+    const availabilityText = (p) => {
+      const d = p.availableDate ? new Date(p.availableDate) : null
+      if (d && d.getTime() > Date.now()) {
+        const dd = String(d.getDate()).padStart(2,'0')
+        const mm = String(d.getMonth()+1).padStart(2,'0')
+        const yy = d.getFullYear()
+        return `${dd}/${mm}/${yy}`
+      }
+      return 'oui'
+    }
 
     const getTjm = (p) => p.mediumDayRate ?? p.smallDayRate ?? p.highDayRate ?? null
     const tjmComponent = (p, min, max) => {
@@ -268,42 +295,50 @@ const availabilityText = (p) => {
 
     // 4) Scoring
     const reqTechs = Array.isArray(criteria.technologies) ? criteria.technologies : []
-const totalReqWeight = reqTechs.reduce((s, t) => s + safeWeight(t.weight), 0)
+    const totalReqWeight = reqTechs.reduce((s, t) => s + safeWeight(t.weight), 0)
 
-const scored = await Promise.all(candidates.map(async p => {// Skills = max( Prestations , 70% Exp + 30% Réals )
-const expMap   = getExpTechMap(p)
-const realMap  = getRealTechMap(p)
-const prestMap = getPrestationTechMap(p)
+    const scored = await Promise.all(candidates.map(async p => {
+      // Skills = max( Prestations , 70% Exp + 30% Réals )
+      const expMap   = getExpTechMap(p)
+      const realMap  = getRealTechMap(p)
+      const prestMap = getPrestationTechMap(p)
 
+      let weightedSum = 0
+      const perTechDetails = []
 
-      let sum = 0
       for (const t of reqTechs) {
         const name = String(t?.name || '').toLowerCase()
         if (!name) continue
-        const need = levelToNum(t?.level)
-const w    = safeWeight(t?.weight)
+        const needNum  = levelToNum(t?.level)
+        const needLbl  = normLevel(t?.level) || null
+        const w        = safeWeight(t?.weight)
 
-const haveExp   = getFromMap(expMap,  name)
-const haveReal  = getFromMap(realMap, name)
-const havePrest = getFromMap(prestMap, name)
-const have = Math.max((0.7 * haveExp) + (0.3 * haveReal), havePrest)
+        const haveExp   = getFromMap(expMap,  name)
+        const haveReal  = getFromMap(realMap, name)
+        const havePrest = getFromMap(prestMap, name)
+        const haveNum   = Math.max((0.7 * haveExp) + (0.3 * haveReal), havePrest)
+        const haveLbl   = haveNum > 0 ? numToNearestLevel(haveNum) : null
 
+        // proximité: 1 si égalité, <1 si sur/sous-qualifié
+        const matchNum = (needNum > 0 && haveNum > 0) ? (Math.min(haveNum, needNum) / Math.max(haveNum, needNum)) : 0
+        weightedSum += matchNum * w
 
-// proximité: 1 si égalité, <1 si sur/sous-qualifié
-const perTech = (need > 0 && have > 0) ? (Math.min(have, need) / Math.max(have, need)) : 0
-        sum += perTech * w
+        perTechDetails.push({
+          techName: t.name,
+          requestedLevel: needLbl,
+          profileLevel: haveLbl,
+          match: Math.round(matchNum * 100), // %
+        })
       }
-      const skills = reqTechs.length ? (sum / totalReqWeight) : 0.5
+
+      const skillsTotal = reqTechs.length ? (weightedSum / totalReqWeight) : 0.5
 
       const tjm = tjmComponent(p, criteria.tjmMin, criteria.tjmMax)
-
-const location = await locationComponentByDistance(p, criteria)
-
-
+      const location = await locationComponentByDistance(p, criteria)
       const avail = availabilityScore(p, criteria.startDate)
 
       const scoreRaw =
-        (skills * weights.skills) +
+        (skillsTotal * weights.skills) +
         (tjm * weights.tjm) +
         (location * weights.location) +
         (avail * weights.availability)
@@ -316,37 +351,45 @@ const location = await locationComponentByDistance(p, criteria)
 
       const scorePct = totalWeight > 0 ? (scoreRaw / totalWeight) * 100 : 0
 
-      return {
-        userId: p.userId,
-        score: Math.round(scorePct),
-details: {
-  skills: Math.round(skills * 100),
-  tjm: Math.round(tjm * 100),
-  location: Math.round(location * 100),
-  availability: Math.round(avail * 100),
-  availabilityText: availabilityText(p), 
-},
-
-      }
+return {
+  userId: p.userId,
+fullName: [
+  (p.firstName ?? p.firstname ?? p.User?.firstName ?? p.User?.firstname),
+  (p.lastName  ?? p.lastname  ?? p.User?.lastName  ?? p.User?.lastname)
+].filter(Boolean).join(' ') || null,
+  score: Math.round(scorePct),
+  details: {
+    tjmValue: getTjm(p),
+    skills: {
+      total: Math.round(skillsTotal * 100),
+      details: perTechDetails,
+    },
+    tjm: Math.round(tjm * 100),
+    location: Math.round(location * 100),
+    availability: Math.round(avail * 100),
+    availabilityText: availabilityText(p),
+  },
+}
     }))
 
-// 5) Tri par priorité (poids décroissants) + top 10
-const order = [
-  { k: 'skills',       w: Number(weights.skills)       || 0 },
-  { k: 'tjm',          w: Number(weights.tjm)          || 0 },
-  { k: 'location',     w: Number(weights.location)     || 0 },
-  { k: 'availability', w: Number(weights.availability) || 0 },
-].sort((a, b) => b.w - a.w).map(o => o.k)
+    // 5) Tri par priorité (poids décroissants) + top 10
+    const order = [
+      { k: 'skills',       w: Number(weights.skills)       || 0 },
+      { k: 'tjm',          w: Number(weights.tjm)          || 0 },
+      { k: 'location',     w: Number(weights.location)     || 0 },
+      { k: 'availability', w: Number(weights.availability) || 0 },
+    ].sort((a, b) => b.w - a.w).map(o => o.k)
 
-scored.sort((a, b) => {
-  for (const k of order) {
-    const da = a.details?.[k] ?? 0
-    const db = b.details?.[k] ?? 0
-    if (db !== da) return db - da
-  }
-  return b.score - a.score
-})
-return res.json(scored.slice(0, 10))
+    scored.sort((a, b) => {
+      for (const k of order) {
+        const va = (k === 'skills') ? (a.details?.skills?.total ?? 0) : (a.details?.[k] ?? 0)
+        const vb = (k === 'skills') ? (b.details?.skills?.total ?? 0) : (b.details?.[k] ?? 0)
+        if (vb !== va) return vb - va
+      }
+      return b.score - a.score
+    })
+
+    return res.json(scored.slice(0, 10))
 
   } catch (e) {
     console.error('shortlist compute error:', e)

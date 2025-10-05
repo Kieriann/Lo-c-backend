@@ -358,6 +358,8 @@ fullName: [
   score: Math.round(scorePct),
   details: {
     tjmValue: getTjm(p),
+    tjmMin: p.smallDayRate ?? null,
+    tjmMax: p.highDayRate ?? null,
     skills: {
       total: Math.round(skillsTotal * 100),
       details: perTechDetails,

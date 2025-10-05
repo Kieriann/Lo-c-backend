@@ -120,6 +120,7 @@ async function main() {
 
 
 
+
       // ── 3) ADDRESS (optionnelle) ─────────────────────────────────
       const hasAddressBits = p.addressLine || p.city || p.postalCode;
       if (hasAddressBits) {

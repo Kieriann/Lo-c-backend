@@ -20,7 +20,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 3,
+    "teleworkDays": 3,
     "prestations": ["développement","intégration","audit"]
   },
   {
@@ -43,7 +43,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"intermédiaire"}],
     "isEmployed": true,
     "availableFrom": "2025-11-01",
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["développement","maintenance"]
   },
   {
@@ -66,7 +66,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 3,
+    "teleworkDays": 3,
     "prestations": ["design","atelier","audit"]
   },
   {
@@ -89,7 +89,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": true,
     "availableFrom": "2025-06-15",
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["développement","architecture"]
   },
   {
@@ -112,7 +112,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Espagnol","level":"courant"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 4,
+    "teleworkDays": 4,
     "prestations": ["audit","contenu","formation"]
   },
   {
@@ -135,7 +135,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": true,
     "availableFrom": "2025-08-01",
-    "remoteDaysCount": 3,
+    "teleworkDays": 3,
     "prestations": ["infra","monitoring","CI/CD"]
   },
   {
@@ -158,7 +158,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 4,
+    "teleworkDays": 4,
     "prestations": ["intégration","thème","maintenance"]
   },
   {
@@ -181,7 +181,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"intermédiaire"}],
     "isEmployed": true,
     "availableFrom": "2025-10-01",
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["cadrage","formation","PO"]
   },
   {
@@ -204,7 +204,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 4,
+    "teleworkDays": 4,
     "prestations": ["audit","formation"]
   },
   {
@@ -227,7 +227,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 4,
+    "teleworkDays": 4,
     "prestations": ["illustration","branding"]
   },
   {
@@ -250,7 +250,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"intermédiaire"}],
     "isEmployed": true,
     "availableFrom": "2025-09-01",
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["mobile","audit app"]
   },
   {
@@ -273,7 +273,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 4,
+    "teleworkDays": 4,
     "prestations": ["data","ETL","architecture"]
   },
   {
@@ -296,7 +296,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2026-01-01",
-    "remoteDaysCount": 4,
+    "teleworkDays": 4,
     "prestations": ["community","ads","contenu"]
   },
   {
@@ -319,7 +319,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 3,
+    "teleworkDays": 3,
     "prestations": ["architecture","migration"]
   },
   {
@@ -342,7 +342,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"notions"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 4,
+    "teleworkDays": 4,
     "prestations": ["branding","UI"]
   },
   {
@@ -365,7 +365,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"intermédiaire"}],
     "isEmployed": true,
     "availableFrom": "2025-07-01",
-    "remoteDaysCount": 3,
+    "teleworkDays": 3,
     "prestations": ["tests","automation"]
   },
   {
@@ -388,7 +388,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 4,
+    "teleworkDays": 4,
     "prestations": ["coaching","formation"]
   },
   {
@@ -411,7 +411,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-12-01",
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["backend","maintenance"]
   },
   {
@@ -434,7 +434,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 4,
+    "teleworkDays": 4,
     "prestations": ["data","ML"]
   },
   {
@@ -457,7 +457,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 4,
+    "teleworkDays": 4,
     "prestations": ["email","deliverability"]
   },
   {
@@ -480,7 +480,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"intermédiaire"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["développement","maintenance","audit"]
   },
   {
@@ -503,7 +503,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": true,
     "availableFrom": "2025-12-01",
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["développement","audit","formation"]
   },
   {
@@ -526,7 +526,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 0,
+    "teleworkDays": 0,
     "prestations": ["architecture","migration","maintenance"]
   },
   {
@@ -549,7 +549,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["développement","tests"]
   },
   {
@@ -572,7 +572,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": true,
     "availableFrom": "2026-01-01",
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["architecture","audit","modernisation"]
   },
   {
@@ -595,7 +595,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["maintenance","audit","formation"]
   },
   {
@@ -618,7 +618,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"intermédiaire"}],
     "isEmployed": true,
     "availableFrom": "2025-05-01",
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["CI/CD","modernisation","formation"]
   },
   {
@@ -641,7 +641,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 0,
+    "teleworkDays": 0,
     "prestations": ["développement","maintenance"]
   },
   {
@@ -664,7 +664,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"intermédiaire"}],
     "isEmployed": true,
     "availableFrom": "2025-04-01",
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["tests","formation"]
   },
   {
@@ -687,7 +687,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["modernisation","architecture","audit"]
   },
   {
@@ -710,7 +710,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["développement","modernisation"]
   },
   {
@@ -733,7 +733,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-03-01",
-    "remoteDaysCount": 0,
+    "teleworkDays": 0,
     "prestations": ["maintenance","run","formation"]
   },
   {
@@ -756,7 +756,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Allemand","level":"intermédiaire"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["maintenance","migration","audit"]
   },
   {
@@ -779,7 +779,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 0,
+    "teleworkDays": 0,
     "prestations": ["audit","sécurité","formation"]
   },
   {
@@ -802,7 +802,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-06-01",
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["développement","automation","formation"]
   },
   {
@@ -825,7 +825,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["audit","optimisation"]
   },
   {
@@ -848,7 +848,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-02-01",
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["développement","maintenance"]
   },
   {
@@ -871,7 +871,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"intermédiaire"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["cadrage","pilotage","formation"]
   },
   {
@@ -894,7 +894,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": true,
     "availableFrom": "2025-09-01",
-    "remoteDaysCount": 0,
+    "teleworkDays": 0,
     "prestations": ["maintenance","optimisation","audit"]
   },
   {
@@ -917,7 +917,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 3,
+    "teleworkDays": 3,
     "prestations": ["formation","audit","coaching"]
   },
   {
@@ -940,7 +940,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-01-15",
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["architecture","maintenance","audit"]
   },
   {
@@ -963,7 +963,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"intermédiaire"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["développement","maintenance"]
   },
   {
@@ -986,7 +986,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-03-15",
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["modernisation","développement"]
   },
   {
@@ -1009,7 +1009,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["CI/CD","cadrage","formation"]
   },
   {
@@ -1032,7 +1032,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-10-01",
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["data","ETL","audit"]
   },
   {
@@ -1055,7 +1055,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 0,
+    "teleworkDays": 0,
     "prestations": ["maintenance","run"]
   },
   {
@@ -1078,7 +1078,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-08-01",
-    "remoteDaysCount": 0,
+    "teleworkDays": 0,
     "prestations": ["architecture","maintenance","audit"]
   },
   {
@@ -1101,7 +1101,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["cadrage","modernisation"]
   },
   {
@@ -1124,7 +1124,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-11-01",
-    "remoteDaysCount": 0,
+ "teleworkDays"   : 0,
     "prestations": ["sécurité","audit","maintenance"]
   },
   {
@@ -1147,7 +1147,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"intermédiaire"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["développement","modernisation"]
   },
   {
@@ -1170,7 +1170,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-02-15",
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["CI/CD","outillage","formation"]
   },
   {
@@ -1193,7 +1193,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["architecture","intégration"]
   },
   {
@@ -1216,7 +1216,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-07-01",
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["développement","audit","formation"]
   },
   {
@@ -1239,7 +1239,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["tests","formation"]
   },
   {
@@ -1262,7 +1262,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2026-02-01",
-    "remoteDaysCount": 0,
+    "teleworkDays": 0,
     "prestations": ["maintenance","audit","formation"]
   },
   {
@@ -1285,7 +1285,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 3,
+    "teleworkDays": 3,
     "prestations": ["formation","coaching"]
   },
   {
@@ -1308,7 +1308,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"intermédiaire"}],
     "isEmployed": true,
     "availableFrom": "2025-12-15",
-    "remoteDaysCount": 1,
+  "teleworkDays"  : 1,
     "prestations": ["CI/CD","automation","formation"]
   },
   {
@@ -1331,7 +1331,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["maintenance","migration"]
   },
   {
@@ -1354,7 +1354,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-06-01",
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["run","audit","optimisation"]
   },
   {
@@ -1377,7 +1377,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["développement","optimisation","audit"]
   },
   {
@@ -1400,7 +1400,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-05-15",
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["cadrage","migration","formation"]
   },
   {
@@ -1423,7 +1423,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 1,
+    "teleworkDays": 1,
     "prestations": ["développement","maintenance"]
   },
   {
@@ -1446,7 +1446,7 @@
     "languages": [{"lang":"Français","level":"natif"},{"lang":"Anglais","level":"courant"}],
     "isEmployed": true,
     "availableFrom": "2025-09-15",
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["architecture","modernisation","audit"]
   },
   {
@@ -1469,7 +1469,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": false,
     "availableFrom": null,
-    "remoteDaysCount": 0,
+    "teleworkDays": 0,
     "prestations": ["run","maintenance"]
   },
   {
@@ -1492,7 +1492,7 @@
     "languages": [{"lang":"Français","level":"natif"}],
     "isEmployed": true,
     "availableFrom": "2025-01-05",
-    "remoteDaysCount": 2,
+    "teleworkDays": 2,
     "prestations": ["développement","tests"]
   }
 ]

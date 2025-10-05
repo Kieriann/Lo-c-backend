@@ -116,12 +116,10 @@ const candidates = await prisma.profile.findMany({
         Experiences: { include: { domainsList: true } },
         realisations: { include: { technos: true } },
         Prestations: true,
-      }
-    }
-  }
+      },
+    },
+  },
 })
-
-
 
     // 3) Helpers
     const safeWeight = w => Math.max(1, Number(w) || 1)
@@ -368,6 +366,7 @@ fullName: [
     location: Math.round(location * 100),
     availability: Math.round(avail * 100),
     availabilityText: availabilityText(p),
+    teleworkDays: p.teleworkDays ?? null,
   },
 }
     }))

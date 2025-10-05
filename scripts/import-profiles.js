@@ -96,7 +96,9 @@ async function main() {
             smallDayRate: rates.small,
             mediumDayRate: rates.medium,
             highDayRate: rates.high,
-            teleworkDays: Number.isInteger(p.remoteDaysCount) ? p.remoteDaysCount : 0,
+            teleworkDays: Number.isFinite(Number(p.teleworkDays ?? p.remoteDaysCount))
+              ? Number(p.teleworkDays ?? p.remoteDaysCount)
+              : 0,
             isEmployed: !!p.isEmployed,
             availableDate: p.availableFrom ? new Date(p.availableFrom) : null,
             website: p.website || null,
@@ -104,8 +106,19 @@ async function main() {
             memberStatus: null,
             User: { connect: { id: user.id } },
           },
-        });
-      }
+        });      
+} else {
+  profile = await prisma.profile.update({
+    where: { userId: user.id },
+    data: {
+      teleworkDays: Number.isFinite(Number(p.teleworkDays ?? p.remoteDaysCount))
+        ? Number(p.teleworkDays ?? p.remoteDaysCount)
+        : (profile.teleworkDays ?? 0),
+    },
+  })
+}
+
+
 
       // ── 3) ADDRESS (optionnelle) ─────────────────────────────────
       const hasAddressBits = p.addressLine || p.city || p.postalCode;

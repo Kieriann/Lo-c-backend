@@ -4,8 +4,8 @@ const requireAuth = require('../middlewares/authMiddleware')
 const { geocodeCity } = require('../utils/geocode')
 
 // ── Niveaux & similarités ───────────────────────────────────────────
-const LEVEL_ORDER = ['beginner','junior','medium','intermediate','senior','expert']
-const LEVEL_CENTERS = { beginner:0.1, junior:0.33, intermediate:0.5, medium:0.66, senior:0.85, expert:1 }
+const LEVEL_ORDER = ['beginner','junior','intermediate','senior','expert']
+const LEVEL_CENTERS = { beginner:0.2, junior:0.4, intermediate:0.6, senior:0.8, expert:1 }
 
 const normLevel = (v) => String(v || '').toLowerCase().trim()
 const levelIndex = (v) => {
@@ -13,11 +13,14 @@ const levelIndex = (v) => {
   const i = LEVEL_ORDER.indexOf(String(v).toLowerCase())
   return i === -1 ? -1 : i
 }
+
 const levelSimilarity = (requested, found) => {
   const r = levelIndex(requested), f = levelIndex(found)
   if (r === -1 || f === -1) return 0
-  const gap = Math.abs(r - f)
-  return [1,0.85,0.65,0.45,0.25,0.1][Math.min(gap,5)]
+  if (f >= r) return 1 // sur-qualifié ou égal : 100%
+  const gap = r - f    // seulement sous-qualifié : pénalisation
+  const penalties = [1,0.85,0.65,0.45,0.25,0.1]
+  return penalties[Math.min(gap, 5)]
 }
 
 // Numérique (0..1) <-> libellé
@@ -32,14 +35,16 @@ const levelToNum = (lv) => {
   const n = Number(lv)
   return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0.5
 }
+
 const numToNearestLevel = (x) => {
-  let best = 'medium', bestD = Infinity
-  for (const [k, v] of Object.entries(LEVEL_CENTERS)) {
-    const d = Math.abs(x - v)
-    if (d < bestD) { bestD = d; best = k }
-  }
-  return best
+  const v = Math.max(0, Math.min(1, Number(x) || 0))
+  if (v < 0.30) return 'beginner'
+  if (v < 0.50) return 'junior'
+  if (v < 0.70) return 'intermediate'
+  if (v < 0.90) return 'senior'
+  return 'expert'
 }
+
 
 /**
  * POST /api/shortlist/compute
@@ -77,20 +82,27 @@ router.post('/compute', requireAuth, async (req, res) => {
         })),
       }
 
-      weights = {
-        skills: cr.skillsWeight ?? 5,
-        tjm: cr.tjmWeight ?? 3,
-        location: cr.locationWeight ?? 2,
-        availability: cr.availabilityWeight ?? 2,
-      }
+weights = {
+  skills: cr.skillsWeight ?? 5,
+  tjm: cr.tjmWeight ?? 3,
+  telework: cr.teleworkWeight ?? 2,
+  availability: cr.availabilityWeight ?? 2,
+}
     } else {
       criteria = req.body.criteria || {}
       weights  = req.body.weights  || {}
       weights.skills ??= 5
       weights.tjm ??= 3
-      weights.location ??= 2
+      weights.telework ??= 2
       weights.availability ??= 2
     }
+
+// Sécuriser côté serveur : pour EXPERTISE on annule tjm/télétravail
+if (String(criteria.kind || '').toUpperCase() === 'EXPERTISE') {
+  weights.tjm = 0
+  weights.telework = 0
+}
+
 
     const norm = s => String(s || '')
       .normalize('NFD').replace(/\p{Diacritic}/gu, '')
@@ -108,18 +120,18 @@ router.post('/compute', requireAuth, async (req, res) => {
     )
 
     // 2) Charger candidats
-const candidates = await prisma.profile.findMany({
-  include: {
-    Address: true,
-    User: {
+    const candidates = await prisma.profile.findMany({
       include: {
-        Experiences: { include: { domainsList: true } },
-        realisations: { include: { technos: true } },
-        Prestations: true,
+        Address: true,
+        User: {
+          include: {
+            Experiences: { include: { domainsList: true } },
+            realisations: { include: { technos: true } },
+            Prestations: true,
+          },
+        },
       },
-    },
-  },
-})
+    })
 
     // 3) Helpers
     const safeWeight = w => Math.max(1, Number(w) || 1)
@@ -160,13 +172,6 @@ const candidates = await prisma.profile.findMany({
         if (String(pr.tech || '').toLowerCase() === tech) return levelToNum(pr.level)
       }
       return null
-    }
-
-    const resolveCandidateCity = (p) => {
-      const name = norm(p.Address?.city)
-      const cc   = (p.Address?.country || '').toUpperCase()
-      if (!name) return null
-      return cityByKey.get(`${name}|${cc}`) || null
     }
 
     const ensureCityCoords = async (city) => {
@@ -255,10 +260,20 @@ const candidates = await prisma.profile.findMany({
       return map
     }
 
-    const isCityMatch = (_p, _cityId) => {
-      // TODO: mapper ville profil ↔ cityId si besoin
-      return true
-    }
+const getProfileTechMap = (p) => {
+  const map = new Map()
+  const arr =
+    Array.isArray(p.technologies) ? p.technologies :
+    (Array.isArray(p.skills) ? p.skills : [])
+  for (const t of arr) {
+    const name = String(typeof t === 'string' ? t : t?.name || '')
+      .toLowerCase().trim()
+    if (!name) continue
+    const lvl = typeof t === 'string' ? 0.66 : levelToNum(t?.level)
+    map.set(name, Math.max(map.get(name) || 0, lvl))
+  }
+  return map
+}
 
     const availabilityScore = (p, startDate) => {
       if (!startDate) return p.isEmployed ? 0.4 : 1
@@ -281,25 +296,75 @@ const candidates = await prisma.profile.findMany({
     }
 
     const getTjm = (p) => p.mediumDayRate ?? p.smallDayRate ?? p.highDayRate ?? null
-    const tjmComponent = (p, min, max) => {
-      const tjm = getTjm(p)
-      if (!tjm || !min || !max) return 0.6
-      if (tjm >= min && tjm <= max) return 1
-      const center = (min + max) / 2
-      const span = Math.max(1, (max - min) / 2)
-      const dist = Math.abs(tjm - center)
-      return Math.max(0, 1 - dist / span)
+const tjmComponent = (p, min, max) => {
+  const a = Number.isFinite(Number(min)) ? Number(min) : null
+  const b = Number.isFinite(Number(max)) ? Number(max) : null
+
+  const x = Number.isFinite(Number(p.smallDayRate)) ? Number(p.smallDayRate) : null
+  const y = Number.isFinite(Number(p.highDayRate))  ? Number(p.highDayRate)  : null
+
+  // Pas d'infos -> neutre
+  if (a == null && b == null) return 0.6
+  if ((x == null || y == null) || y < x) {
+    // fallback mono-valeur si la fourchette profil est incomplète
+    const tjm = getTjm(p)
+    if (!tjm) return 0.6
+    if (a != null && b != null) {
+      if (tjm >= a && tjm <= b) return 1
+      const center = (a + b) / 2
+      const span = Math.max(1, (b - a) / 2)
+      return Math.max(0, 1 - Math.abs(tjm - center) / span)
     }
+    if (b != null) {
+      if (tjm <= b) return 1
+      const span = Math.max(1, b * 0.5)
+      return Math.max(0, 1 - (tjm - b) / span)
+    }
+    if (a != null) {
+      if (tjm >= a) return 1
+      const span = Math.max(1, a * 0.5)
+      return Math.max(0, 1 - (a - tjm) / span)
+    }
+    return 0.6
+  }
+
+  // Normalisation des bornes client si une seule est fournie
+  const A = a != null ? a : 0
+  const B = b != null ? b : Infinity
+
+  // Règle 100% si chevauchement, même 1 €
+  if (A <= y && x <= B) return 1
+
+  // Sinon, distance minimale entre intervalles disjoints
+  const dist =
+    B < x ? (x - B) :      // client en-dessous du profil
+    A > y ? (A - y) : 0    // client au-dessus du profil (sinon chevauchement déjà capté)
+
+  // Échelle de pénalisation : somme des largeurs (client + profil)
+  const widthClient = (isFinite(B) ? (B - A) : A) || 0
+  const widthProfil = (y - x) || 0
+  const span = Math.max(1, widthClient + widthProfil)
+
+  return Math.max(0, 1 - dist / span)
+}
+
+
 
     // 4) Scoring
-    const reqTechs = Array.isArray(criteria.technologies) ? criteria.technologies : []
-    const totalReqWeight = reqTechs.reduce((s, t) => s + safeWeight(t.weight), 0)
+const reqTechsRaw = Array.isArray(criteria.technologies) ? criteria.technologies : []
+const reqTechs = reqTechsRaw.map(t =>
+  (typeof t === 'string' ? { name: t, level: 'intermediate', weight: 1 } : t)
+)
+const totalReqWeight = reqTechs.reduce((s, t) => s + safeWeight(t?.weight), 0)
+
 
     const scored = await Promise.all(candidates.map(async p => {
       // Skills = max( Prestations , 70% Exp + 30% Réals )
       const expMap   = getExpTechMap(p)
       const realMap  = getRealTechMap(p)
       const prestMap = getPrestationTechMap(p)
+      const profMap  = getProfileTechMap(p)
+
 
       let weightedSum = 0
       const perTechDetails = []
@@ -314,72 +379,94 @@ const candidates = await prisma.profile.findMany({
         const haveExp   = getFromMap(expMap,  name)
         const haveReal  = getFromMap(realMap, name)
         const havePrest = getFromMap(prestMap, name)
-        const haveNum   = Math.max((0.7 * haveExp) + (0.3 * haveReal), havePrest)
+        const haveProf  = getFromMap(profMap,  name)
+        const haveNum   = Math.max((0.7 * haveExp) + (0.3 * haveReal), havePrest, haveProf)
         const haveLbl   = haveNum > 0 ? numToNearestLevel(haveNum) : null
 
-        // proximité: 1 si égalité, <1 si sur/sous-qualifié
-        const matchNum = (needNum > 0 && haveNum > 0) ? (Math.min(haveNum, needNum) / Math.max(haveNum, needNum)) : 0
+        // proximité: 1 si égalité/sur-qualifié, <1 si sous-qualifié
+        const matchNum = (needLbl && haveLbl) ? levelSimilarity(needLbl, haveLbl) : 0
         weightedSum += matchNum * w
 
         perTechDetails.push({
-          techName: t.name,
+        techName: t.name || String(t),
           requestedLevel: needLbl,
           profileLevel: haveLbl,
           match: Math.round(matchNum * 100), // %
+          requestedNum: Number(needNum.toFixed(2)),
+          profileNum: Number(haveNum.toFixed(2)),
         })
       }
 
       const skillsTotal = reqTechs.length ? (weightedSum / totalReqWeight) : 0.5
 
-      const tjm = tjmComponent(p, criteria.tjmMin, criteria.tjmMax)
-      const location = await locationComponentByDistance(p, criteria)
+const tjm = tjmComponent(p, criteria.tjmMin, criteria.tjmMax)
+const telework = (() => {
+
+  const req = Number(criteria.remoteDaysCount)
+  const cand = Number(p.teleworkDays)
+
+  if (!Number.isFinite(req)) return 0.5            // pas de critère -> neutre
+  if (!Number.isFinite(cand)) return 0              // pas d'info profil -> 0
+  if (cand >= req) return 1                         // profil couvre le besoin
+
+  const gap = req - cand                            // jours manquants
+  const span = Math.max(1, req)                     // échelle = besoin
+  return Math.max(0, 1 - gap / span)                // 0..1
+})()
+
+
       const avail = availabilityScore(p, criteria.startDate)
 
       const scoreRaw =
         (skillsTotal * weights.skills) +
         (tjm * weights.tjm) +
-        (location * weights.location) +
+        (telework * weights.telework) +
         (avail * weights.availability)
 
-      const totalWeight =
-        (weights.skills || 0) +
-        (weights.tjm || 0) +
-        (weights.location || 0) +
-        (weights.availability || 0)
+
+const totalWeight =
+  (weights.skills || 0) +
+  (weights.tjm || 0) +
+  (weights.telework || 0) +
+  (weights.availability || 0)
+
 
       const scorePct = totalWeight > 0 ? (scoreRaw / totalWeight) * 100 : 0
+      const safeScorePct = Number.isFinite(scorePct) ? scorePct : 0
 
-return {
-  userId: p.userId,
-fullName: [
-  (p.firstName ?? p.firstname ?? p.User?.firstName ?? p.User?.firstname),
-  (p.lastName  ?? p.lastname  ?? p.User?.lastName  ?? p.User?.lastname)
-].filter(Boolean).join(' ') || null,
-  score: Math.round(scorePct),
-  details: {
-    tjmValue: getTjm(p),
-    tjmMin: p.smallDayRate ?? null,
-    tjmMax: p.highDayRate ?? null,
-    skills: {
-      total: Math.round(skillsTotal * 100),
-      details: perTechDetails,
-    },
-    tjm: Math.round(tjm * 100),
-    location: Math.round(location * 100),
-    availability: Math.round(avail * 100),
-    availabilityText: availabilityText(p),
-    teleworkDays: p.teleworkDays ?? null,
-  },
-}
+      return {
+        userId: p.userId,
+        fullName: [
+          (p.firstName ?? p.firstname ?? p.User?.firstName ?? p.User?.firstname),
+          (p.lastName  ?? p.lastname  ?? p.User?.lastName  ?? p.User?.lastname)
+        ].filter(Boolean).join(' ') || null,
+        score: Math.round(safeScorePct),
+        details: {
+          tjmValue: getTjm(p),
+          tjmMin: p.smallDayRate ?? null,
+          tjmMax: p.highDayRate ?? null,
+          skills: {
+            total: Math.round(skillsTotal * 100),
+            details: perTechDetails,
+          },
+          tjm: Math.round(tjm * 100),
+          availability: Math.round(avail * 100),
+          availabilityText: availabilityText(p),
+          telework: Math.round(telework * 100),
+          teleworkDays: p.teleworkDays ?? null,
+          teleworkNeeded: criteria.remoteDaysCount ?? null,
+        },
+
+      }
     }))
 
     // 5) Tri par priorité (poids décroissants) + top 10
-    const order = [
-      { k: 'skills',       w: Number(weights.skills)       || 0 },
-      { k: 'tjm',          w: Number(weights.tjm)          || 0 },
-      { k: 'location',     w: Number(weights.location)     || 0 },
-      { k: 'availability', w: Number(weights.availability) || 0 },
-    ].sort((a, b) => b.w - a.w).map(o => o.k)
+const order = [
+  { k: 'skills',       w: Number(weights.skills)       || 0 },
+  { k: 'tjm',          w: Number(weights.tjm)          || 0 },
+  { k: 'telework',     w: Number(weights.telework)     || 0 },
+  { k: 'availability', w: Number(weights.availability) || 0 },
+].sort((a, b) => b.w - a.w).map(o => o.k)
 
     scored.sort((a, b) => {
       for (const k of order) {
@@ -390,7 +477,8 @@ fullName: [
       return b.score - a.score
     })
 
-    return res.json(scored.slice(0, 10))
+const onlyWithSkills = scored.filter(s => (s?.details?.skills?.total ?? 0) > 0)
+return res.json(onlyWithSkills.slice(0, 10))
 
   } catch (e) {
     console.error('shortlist compute error:', e)

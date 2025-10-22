@@ -17,11 +17,12 @@ const levelIndex = (v) => {
 const levelSimilarity = (requested, found) => {
   const r = levelIndex(requested), f = levelIndex(found)
   if (r === -1 || f === -1) return 0
-  if (f >= r) return 1 // sur-qualifié ou égal : 100%
-  const gap = r - f    // seulement sous-qualifié : pénalisation
-  const penalties = [1,0.85,0.65,0.45,0.25,0.1]
-  return penalties[Math.min(gap, 5)]
+  if (f >= r) return 1
+  const gap = r - f
+  const steps = [1, 0.8, 0.6, 0.4, 0.2, 0] 
+  return steps[Math.min(gap, 5)]
 }
+
 
 // Numérique (0..1) <-> libellé
 const levelToNum = (lv) => {
@@ -350,115 +351,109 @@ const tjmComponent = (p, min, max) => {
 
 
 
-    // 4) Scoring
+// 4) Scoring
 const reqTechsRaw = Array.isArray(criteria.technologies) ? criteria.technologies : []
 const reqTechs = reqTechsRaw.map(t =>
   (typeof t === 'string' ? { name: t, level: 'intermediate', weight: 1 } : t)
 )
-const totalReqWeight = reqTechs.reduce((s, t) => s + safeWeight(t?.weight), 0)
+const totalReqWeight = reqTechs.reduce((s, t) => s + Number(t?.weight || 0), 0)
 
+const scored = await Promise.all(candidates.map(async p => {
+  const expMap   = getExpTechMap(p)
+  const realMap  = getRealTechMap(p)
+  const prestMap = getPrestationTechMap(p)
+  const profMap  = getProfileTechMap(p)
 
-    const scored = await Promise.all(candidates.map(async p => {
-      // Skills = max( Prestations , 70% Exp + 30% Réals )
-      const expMap   = getExpTechMap(p)
-      const realMap  = getRealTechMap(p)
-      const prestMap = getPrestationTechMap(p)
-      const profMap  = getProfileTechMap(p)
+  let weightedSumPct = 0
+  const perTechDetails = []
 
+  for (const t of reqTechs) {
+    const name = String(t?.name || '').toLowerCase()
+    if (!name) continue
+    const needNum  = levelToNum(t?.level)
+    const needLbl  = normLevel(t?.level) || null
+    const w        = safeWeight(t?.weight)
 
-      let weightedSum = 0
-      const perTechDetails = []
+    const haveExp   = getFromMap(expMap,  name)
+    const haveReal  = getFromMap(realMap, name)
+    const havePrest = getFromMap(prestMap, name)
+    const haveProf  = getFromMap(profMap,  name)
+    const haveNum   = Math.max((0.7 * haveExp) + (0.3 * haveReal), havePrest, haveProf)
+    const haveLbl   = haveNum > 0 ? numToNearestLevel(haveNum) : null
 
-      for (const t of reqTechs) {
-        const name = String(t?.name || '').toLowerCase()
-        if (!name) continue
-        const needNum  = levelToNum(t?.level)
-        const needLbl  = normLevel(t?.level) || null
-        const w        = safeWeight(t?.weight)
+    const matchNum  = (needLbl && haveLbl) ? levelSimilarity(needLbl, haveLbl) : 0
+    const matchPct  = Math.round(matchNum * 100)
 
-        const haveExp   = getFromMap(expMap,  name)
-        const haveReal  = getFromMap(realMap, name)
-        const havePrest = getFromMap(prestMap, name)
-        const haveProf  = getFromMap(profMap,  name)
-        const haveNum   = Math.max((0.7 * haveExp) + (0.3 * haveReal), havePrest, haveProf)
-        const haveLbl   = haveNum > 0 ? numToNearestLevel(haveNum) : null
+weightedSumPct += matchPct * Number(t?.weight || 0)
 
-        // proximité: 1 si égalité/sur-qualifié, <1 si sous-qualifié
-        const matchNum = (needLbl && haveLbl) ? levelSimilarity(needLbl, haveLbl) : 0
-        weightedSum += matchNum * w
+    perTechDetails.push({
+      techName: t.name || String(t),
+      requestedLevel: needLbl,
+      profileLevel: haveLbl,
+      match: matchPct,
+      requestedNum: Number(needNum.toFixed(2)),
+      profileNum: Number(haveNum.toFixed(2)),
+    })
+  }
 
-        perTechDetails.push({
-        techName: t.name || String(t),
-          requestedLevel: needLbl,
-          profileLevel: haveLbl,
-          match: Math.round(matchNum * 100), // %
-          requestedNum: Number(needNum.toFixed(2)),
-          profileNum: Number(haveNum.toFixed(2)),
-        })
-      }
+  const skillsTotalPct = reqTechs.length ? Math.round(weightedSumPct / totalReqWeight) : 50
 
-      const skillsTotal = reqTechs.length ? (weightedSum / totalReqWeight) : 0.5
+  const tjm = tjmComponent(p, criteria.tjmMin, criteria.tjmMax)
+  const tjmPct = Math.round(tjm * 100)
 
-const tjm = tjmComponent(p, criteria.tjmMin, criteria.tjmMax)
-const telework = (() => {
+  const telework = (() => {
+    const req  = Number(criteria.remoteDaysCount)
+    const cand = Number(p.teleworkDays)
+    if (!Number.isFinite(req))  return 50
+    if (!Number.isFinite(cand)) return 0
+    const diff = Math.abs(cand - req)
+    const steps = [100, 80, 60, 40, 20, 0]
+    return steps[Math.min(diff, 5)]
+  })()
 
-  const req = Number(criteria.remoteDaysCount)
-  const cand = Number(p.teleworkDays)
+  const avail = availabilityScore(p, criteria.startDate)
+  const availPct = Math.round(avail * 100)
 
-  if (!Number.isFinite(req)) return 0.5            // pas de critère -> neutre
-  if (!Number.isFinite(cand)) return 0              // pas d'info profil -> 0
-  if (cand >= req) return 1                         // profil couvre le besoin
+  const scoreRaw =
+    weightedSumPct +
+    (tjmPct * (Number(weights.tjm) || 0)) +
+    (telework * (Number(weights.telework) || 0)) +
+    (availPct * (Number(weights.availability) || 0))
 
-  const gap = req - cand                            // jours manquants
-  const span = Math.max(1, req)                     // échelle = besoin
-  return Math.max(0, 1 - gap / span)                // 0..1
-})()
+  const totalWeight =
+    totalReqWeight +
+    (Number(weights.tjm) || 0) +
+    (Number(weights.telework) || 0) +
+    (Number(weights.availability) || 0)
 
+  const scorePct = totalWeight > 0 ? (scoreRaw / totalWeight) : 0
+  const safeScorePct = Number.isFinite(scorePct) ? scorePct : 0
 
-      const avail = availabilityScore(p, criteria.startDate)
-
-      const scoreRaw =
-        (skillsTotal * weights.skills) +
-        (tjm * weights.tjm) +
-        (telework * weights.telework) +
-        (avail * weights.availability)
-
-
-const totalWeight =
-  (weights.skills || 0) +
-  (weights.tjm || 0) +
-  (weights.telework || 0) +
-  (weights.availability || 0)
-
-
-      const scorePct = totalWeight > 0 ? (scoreRaw / totalWeight) * 100 : 0
-      const safeScorePct = Number.isFinite(scorePct) ? scorePct : 0
-
-      return {
-        userId: p.userId,
-        fullName: [
-          (p.firstName ?? p.firstname ?? p.User?.firstName ?? p.User?.firstname),
-          (p.lastName  ?? p.lastname  ?? p.User?.lastName  ?? p.User?.lastname)
-        ].filter(Boolean).join(' ') || null,
-        score: Math.round(safeScorePct),
-        details: {
-          tjmValue: getTjm(p),
-          tjmMin: p.smallDayRate ?? null,
-          tjmMax: p.highDayRate ?? null,
-          skills: {
-            total: Math.round(skillsTotal * 100),
-            details: perTechDetails,
-          },
-          tjm: Math.round(tjm * 100),
-          availability: Math.round(avail * 100),
-          availabilityText: availabilityText(p),
-          telework: Math.round(telework * 100),
-          teleworkDays: p.teleworkDays ?? null,
-          teleworkNeeded: criteria.remoteDaysCount ?? null,
-        },
-
-      }
-    }))
+  return {
+    userId: p.userId,
+    fullName: [
+      (p.firstName ?? p.firstname ?? p.User?.firstName ?? p.User?.firstname),
+      (p.lastName  ?? p.lastname  ?? p.User?.lastName  ?? p.User?.lastname)
+    ].filter(Boolean).join(' ') || null,
+    score: Math.round(safeScorePct),
+    details: {
+      tjmValue: getTjm(p),
+      tjmMin: p.smallDayRate ?? null,
+      tjmMax: p.highDayRate ?? null,
+      skills: {
+        total: skillsTotalPct,
+        weight: totalReqWeight,
+        details: perTechDetails,
+      },
+      tjm: tjmPct,
+      availability: availPct,
+      availabilityText: availabilityText(p),
+      telework: telework,
+      teleworkDays: p.teleworkDays ?? null,
+      teleworkNeeded: criteria.remoteDaysCount ?? null,
+    },
+  }
+}))
 
     // 5) Tri par priorité (poids décroissants) + top 10
 const order = [

@@ -2,7 +2,7 @@
 const express = require('express')
 const cors = require('cors')
 const dotenv = require('dotenv')
-const path = require('path')
+const app = express()
 
 dotenv.config()
 if (!process.env.JWT_SECRET) {
@@ -11,7 +11,6 @@ if (!process.env.JWT_SECRET) {
 
 
 // ─── Création de l'app Express ───────────────────────────────────────
-const app = express()
 app.get('/db-ping', async (_req, res) => {
   try {
     await require('./src/utils/prismaClient').$queryRaw`SELECT 1`
@@ -92,6 +91,9 @@ app.use('/api/suggestions', suggestionsRouter)
 app.use('/api/client/requests', require('./src/routes/clientRequests'))
 app.use('/api/service-requests', serviceRequestRouter)
 app.use('/api/shortlist', require('./src/routes/shortlist.js'))
+app.use('/api/forum', require('./src/routes/forum'))
+app.use('/avatars', express.static(require('path').join(__dirname, 'public', 'avatars')))
+app.use('/api/avatars', require('./src/routes/avatars'))
 
 // ─── Routes de test/debug ───────────────────────────────────────────
 app.get('/test', (req, res) => {
@@ -110,9 +112,20 @@ app.use((err, req, res, next) => {
     .status(500)
     .json({ error: err.message, stack: err.stack.split('\n').slice(0,5) })
 })
+// ── Socket.io + lancement serveur ────────────────────────────────────
+const http = require('http')
+const { Server } = require('socket.io')
+const server = http.createServer(app)
+const io = new Server(server, {
+  cors: { origin: ['http://localhost:5173'], credentials: true }
+})
+app.set('io', io)
+io.on('connection', (socket) => {
+  socket.on('join',  ({ room }) => socket.join(room))
+  socket.on('leave', ({ room }) => socket.leave(room))
+})
 
-// ─── Lancement du serveur ────────────────────────────────────────────
 const PORT = process.env.PORT || 4000
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`)
 })

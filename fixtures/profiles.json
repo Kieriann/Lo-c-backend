@@ -472,7 +472,7 @@
     "postalCode": "31000",
     "addressLine": "12 rue des Fleurs",
     "country": "France",
-    "skills": ["COBOL","JCL","CICS","DB2","VSAM"],
+    "skills": ["COBOL","CICS","DB2","VSAM"],
     "technologies": ["z/OS","CICS","DB2","TSO/ISPF","Endevor"],
     "experiences": [
       {"company":"Banque Sud","role":"Dev COBOL","from":"2016-01-01","to":"2024-08-01","desc":"Batch, écrans CICS, perfs."}
@@ -495,7 +495,7 @@
     "postalCode": "69002",
     "addressLine": "4 rue Mercière",
     "country": "France",
-    "skills": ["COBOL","DB2","SQL","JCL","Analyse"],
+    "skills": ["COBOL","DB2","SQL","Analyse"],
     "technologies": ["DB2 z/OS","SPUFI","QMF","TSO","SDSF"],
     "experiences": [
       {"company":"AssurPlus","role":"Analyste COBOL","from":"2018-02-01","to":"2024-05-01","desc":"Optimisations DB2 et lots."}
@@ -541,7 +541,7 @@
     "postalCode": "44000",
     "addressLine": "6 quai de la Fosse",
     "country": "France",
-    "skills": ["COBOL","JCL","SQL","Git","Tests"],
+    "skills": ["COBOL","SQL","Git","Tests"],
     "technologies": ["Zowe","VS Code","DB2","TSO","ISPF"],
     "experiences": [
       {"company":"Formation Pro","role":"Stagiaire COBOL","from":"2024-01-01","to":"2024-09-01","desc":"TP lots, tables DB2."}
@@ -633,7 +633,7 @@
     "postalCode": "13001",
     "addressLine": "5 rue de Rome",
     "country": "France",
-    "skills": ["PL/I","COBOL","JCL","DFSORT","VSAM"],
+    "skills": ["PL/I","COBOL","DFSORT","VSAM"],
     "technologies": ["DFSORT","ICETOOL","CA-7","SDSF","TSO"],
     "experiences": [
       {"company":"LogiMed","role":"Dev Senior","from":"2010-02-01","to":"2024-06-01","desc":"Lots nocturnes, perfs."}
@@ -703,7 +703,7 @@
     "addressLine": "7 rue Liberté",
     "country": "France",
     "skills": ["Java","COBOL","SQL","Git","Tests"],
-    "technologies": ["Zowe","IDz","DB2","JCL","TSO"],
+    "technologies": ["Zowe","IDz","DB2","TSO"],
     "experiences": [
       {"company":"SSII Cote-d'Or","role":"Dev Java/COBOL","from":"2021-01-01","to":"2024-08-01","desc":"Transco Java → COBOL."}
     ],
@@ -725,7 +725,7 @@
     "postalCode": "06000",
     "addressLine": "1 rue Masséna",
     "country": "France",
-    "skills": ["Batch","Control-M","JCL","Incident","Monitoring"],
+    "skills": ["Batch","Control-M","Incident","Monitoring"],
     "technologies": ["Control-M","SDSF","OMEGAMON","TSO","GDG"],
     "experiences": [
       {"company":"OpsRiviera","role":"Ops z/OS","from":"2016-06-01","to":"2024-04-01","desc":"Prod, run, astreintes."}
@@ -748,7 +748,7 @@
     "postalCode": "67000",
     "addressLine": "21 quai Finkwiller",
     "country": "France",
-    "skills": ["Natural","Adabas","COBOL","JCL","Analyse"],
+    "skills": ["Natural","Adabas","COBOL","Analyse"],
     "technologies": ["Natural","Adabas","TSO","ISPF","SAG"],
     "experiences": [
       {"company":"Collectivité Est","role":"Analyste","from":"2015-01-01","to":"2024-06-01","desc":"Maint. Natural/Adabas."}
@@ -794,7 +794,7 @@
     "postalCode": "49000",
     "addressLine": "8 rue Botanique",
     "country": "France",
-    "skills": ["REXX","ISPF","CLIST","JCL","Outils"],
+    "skills": ["REXX","ISPF","CLIST","Outils"],
     "technologies": ["REXX","ISPF","TSO","SDSF","DFSORT"],
     "experiences": [
       {"company":"IndusLoire","role":"Dev Outils","from":"2017-05-01","to":"2024-05-01","desc":"Macros, scripts run."}
@@ -840,7 +840,7 @@
     "postalCode": "37000",
     "addressLine": "3 rue Nationale",
     "country": "France",
-    "skills": ["COBOL","SQL","Git","Tests","JCL"],
+    "skills": ["COBOL","SQL","Git","Tests"],
     "technologies": ["IDz","DB2","Zowe","TSO","ISPF"],
     "experiences": [
       {"company":"SSII Centre","role":"Dev Junior","from":"2023-06-01","to":"2024-09-01","desc":"Corrections, lots."}
@@ -863,7 +863,7 @@
     "postalCode": "69007",
     "addressLine": "19 rue Chevreul",
     "country": "France",
-    "skills": ["Gestion","Planification","CICS","DB2","JCL"],
+    "skills": ["Gestion","Planification","CICS","DB2"],
     "technologies": ["Jira","Confluence","Control-M","CICS","DB2"],
     "experiences": [
       {"company":"Banque Rhône","role":"CDP MF","from":"2014-01-01","to":"2024-03-01","desc":"Projets cœur bancaire."}
@@ -910,7 +910,7 @@
     "addressLine": "4 place d'Armes",
     "country": "France",
     "skills": ["Pédagogie","COBOL","DB2","CICS","Méthodo"],
-    "technologies": ["IDz","Zowe","DB2","CICS","JCL"],
+    "technologies": ["IDz","Zowe","DB2","CICS"],
     "experiences": [
       {"company":"EduTech","role":"Formatrice MF","from":"2016-09-01","to":"2024-02-01","desc":"Bootcamps COBOL."}
     ],
@@ -955,7 +955,7 @@
     "postalCode": "51100",
     "addressLine": "5 rue Chanzy",
     "country": "France",
-    "skills": ["COBOL","IMS","DB/DC","JCL","Analyse"],
+    "skills": ["COBOL","IMS","DB/DC","Analyse"],
     "technologies": ["IMS","DB2","CICS","TSO","Endevor"],
     "experiences": [
       {"company":"AgriEst","role":"Dev IMS","from":"2012-02-01","to":"2024-06-01","desc":"Transactions IMS, perfs."}
@@ -979,7 +979,7 @@
     "addressLine": "2 rue des Écoles",
     "country": "France",
     "skills": ["Node.js","COBOL","SQL","Git","Tests"],
-    "technologies": ["z/OS Connect","Zowe","DB2","JCL","CICS"],
+    "technologies": ["z/OS Connect","Zowe","DB2","CICS"],
     "experiences": [
       {"company":"WebOuest","role":"Dev Fullstack","from":"2020-04-01","to":"2024-07-01","desc":"API REST, init MF."}
     ],
@@ -1047,7 +1047,7 @@
     "postalCode": "30000",
     "addressLine": "7 boulevard Gambetta",
     "country": "France",
-    "skills": ["Support","JCL","DB2","CICS","ITIL"],
+    "skills": ["Support","DB2","CICS","ITIL"],
     "technologies": ["ServiceNow","SDSF","CICS","DB2","TSO"],
     "experiences": [
       {"company":"AssurSud","role":"Support MF","from":"2017-10-01","to":"2024-04-01","desc":"Run applis cœur."}
@@ -1139,7 +1139,7 @@
     "postalCode": "45000",
     "addressLine": "18 rue Royale",
     "country": "France",
-    "skills": ["COBOL","CICS","DB2","JCL","Analyse"],
+    "skills": ["COBOL","CICS","DB2","Analyse"],
     "technologies": ["CICS","DB2","MQ","z/OS Connect","Endevor"],
     "experiences": [
       {"company":"Mutuelle Centre","role":"Dev MF","from":"2016-01-01","to":"2024-06-01","desc":"TP et batch."}
@@ -1277,7 +1277,7 @@
     "postalCode": "37100",
     "addressLine": "22 rue Colbert",
     "country": "France",
-    "skills": ["Formation","COBOL","DB2","JCL","Zowe"],
+    "skills": ["Formation","","DB2","Zowe"],
     "technologies": ["IDz","Zowe","DB2","TSO","ISPF"],
     "experiences": [
       {"company":"AcadMF","role":"Formatrice","from":"2018-01-01","to":"2024-09-01","desc":"Bootcamps intensifs."}
@@ -1415,7 +1415,7 @@
     "postalCode": "42000",
     "addressLine": "10 rue Michelet",
     "country": "France",
-    "skills": ["PL/I","DB2","COBOL","JCL","Perf"],
+    "skills": ["PL/I","DB2","COBOL","Perf"],
     "technologies": ["PL/I","DB2","Endevor","TSO","SDSF"],
     "experiences": [
       {"company":"Mutuelle Loire","role":"Dev PL/I","from":"2013-05-01","to":"2024-05-01","desc":"Lots volumineux."}
@@ -1461,7 +1461,7 @@
     "postalCode": "87000",
     "addressLine": "6 place Denis Dussoubs",
     "country": "France",
-    "skills": ["Ops","Scheduling","JCL","SDSF","Incident"],
+    "skills": ["Ops","Scheduling","SDSF","Incident"],
     "technologies": ["Control-M","SDSF","TSO","OMEGAMON","GDG"],
     "experiences": [
       {"company":"Public87","role":"Exploitant","from":"2018-01-01","to":"2024-06-01","desc":"Run 24/7."}
@@ -1484,7 +1484,7 @@
     "postalCode": "35200",
     "addressLine": "7 rue de Nantes",
     "country": "France",
-    "skills": ["COBOL","SQL","Git","JCL","Tests"],
+    "skills": ["COBOL","SQL","Git","Tests"],
     "technologies": ["CICS","DB2","IDz","Zowe","Endevor"],
     "experiences": [
       {"company":"SSII Breizh","role":"Dev Junior","from":"2022-05-01","to":"2024-07-01","desc":"Corrections, unit tests."}
@@ -1507,7 +1507,7 @@
     "isEmployed": false,
     "availableFrom": "2025-10-20",
     "languages": [{ "lang": "fr", "level": "native" }, { "lang": "en", "level": "working" }],
-    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "intermediate" }],
+    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "junior" }],
     "yearsOfExperience": 7
   },
   {
@@ -1522,7 +1522,7 @@
     "isEmployed": false,
     "availableFrom": "2025-10-20",
     "languages": [{ "lang": "fr", "level": "native" }, { "lang": "en", "level": "working" }],
-    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "intermediate" }],
+    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "junior" }],
     "yearsOfExperience": 7
   },
   {
@@ -1537,7 +1537,7 @@
     "isEmployed": false,
     "availableFrom": "2025-10-20",
     "languages": [{ "lang": "fr", "level": "native" }, { "lang": "en", "level": "working" }],
-    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "intermediate" }],
+    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "junior" }],
     "yearsOfExperience": 7
   },
   {
@@ -1552,7 +1552,7 @@
     "isEmployed": false,
     "availableFrom": "2025-10-20",
     "languages": [{ "lang": "fr", "level": "native" }, { "lang": "en", "level": "working" }],
-    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "intermediate" }],
+    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "junior" }],
     "yearsOfExperience": 7
   },
   {
@@ -1567,7 +1567,7 @@
     "isEmployed": false,
     "availableFrom": "2025-10-20",
     "languages": [{ "lang": "fr", "level": "native" }, { "lang": "en", "level": "working" }],
-    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "intermediate" }],
+    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "junior" }],
     "yearsOfExperience": 7
   },
   {
@@ -1582,7 +1582,7 @@
     "isEmployed": false,
     "availableFrom": "2025-10-20",
     "languages": [{ "lang": "fr", "level": "native" }, { "lang": "en", "level": "working" }],
-    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "intermediate" }],
+    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "junior" }],
     "yearsOfExperience": 7
   },
   {
@@ -1597,7 +1597,7 @@
     "isEmployed": false,
     "availableFrom": "2025-10-20",
     "languages": [{ "lang": "fr", "level": "native" }, { "lang": "en", "level": "working" }],
-    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "intermediate" }],
+    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "junior" }],
     "yearsOfExperience": 7
   },
   {
@@ -1612,7 +1612,7 @@
     "isEmployed": false,
     "availableFrom": "2025-10-13",
     "languages": [{ "lang": "fr", "level": "native" }, { "lang": "en", "level": "working" }],
-    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "intermediate" }],
+    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "junior" }],
     "yearsOfExperience": 7
   },
   {
@@ -1627,7 +1627,7 @@
     "isEmployed": false,
     "availableFrom": "2025-10-20",
     "languages": [{ "lang": "fr", "level": "native" }, { "lang": "en", "level": "working" }],
-    "technologies": [{ "name": "COBOL", "level": "junior" }, { "name": "JCL", "level": "intermediate" }],
+    "technologies": [{ "name": "COBOL", "level": "junior" }, { "name": "JCL", "level": "junior" }],
     "yearsOfExperience": 7
   },
   {
@@ -1642,7 +1642,7 @@
     "isEmployed": false,
     "availableFrom": "2025-10-20",
     "languages": [{ "lang": "fr", "level": "native" }, { "lang": "en", "level": "working" }],
-    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "intermediate" }, { "name": "CICS", "level": "intermediate" }],
+    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "junior" }, { "name": "CICS", "level": "intermediate" }],
     "yearsOfExperience": 7
   }
 ]

@@ -125,6 +125,34 @@ model Message {
   receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
 
+model ForumUser {
+  id             Int       @id @default(autoincrement())
+  userId         Int       // référence à ton User existant
+  anonymousTag   Int       @unique
+  avatarUrl      String?
+  threads        Thread[]
+  replies        Reply[]
+}
+
+model Thread {
+  id          Int       @id @default(autoincrement())
+  title       String
+  content     String
+  createdAt   DateTime  @default(now())
+  authorId    Int
+  author      ForumUser @relation(fields: [authorId], references: [id])
+  replies     Reply[]
+}
+
+model Reply {
+  id          Int       @id @default(autoincrement())
+  content     String
+  createdAt   DateTime  @default(now())
+  authorId    Int
+  author      ForumUser @relation(fields: [authorId], references: [id])
+  threadId    Int
+  thread      Thread    @relation(fields: [threadId], references: [id])
+}
 
 //
 // ─── RÉFÉRENCES CLIENTS ─────────────────────────────────────────────

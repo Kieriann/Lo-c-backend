@@ -1,5 +1,5 @@
--- ── Table ForumUser ─────────────────────────────────────────────
-CREATE TABLE "ForumUser" (
+-- Table ForumUser
+CREATE TABLE IF NOT EXISTS "ForumUser" (
   "id" SERIAL PRIMARY KEY,
   "userId" INTEGER NOT NULL,
   "anonymousTag" INTEGER UNIQUE NOT NULL,
@@ -8,8 +8,8 @@ CREATE TABLE "ForumUser" (
     FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE
 );
 
--- ── Table Thread ────────────────────────────────────────────────
-CREATE TABLE "Thread" (
+-- Table Thread
+CREATE TABLE IF NOT EXISTS "Thread" (
   "id" SERIAL PRIMARY KEY,
   "title" TEXT NOT NULL,
   "content" TEXT NOT NULL,
@@ -19,8 +19,8 @@ CREATE TABLE "Thread" (
     FOREIGN KEY ("authorId") REFERENCES "ForumUser" ("id") ON DELETE CASCADE
 );
 
--- ── Table Reply ─────────────────────────────────────────────────
-CREATE TABLE "Reply" (
+-- Table Reply
+CREATE TABLE IF NOT EXISTS "Reply" (
   "id" SERIAL PRIMARY KEY,
   "content" TEXT NOT NULL,
   "createdAt" TIMESTAMP DEFAULT NOW(),

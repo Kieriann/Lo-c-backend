@@ -1,0 +1,2 @@
+ALTER TABLE "Thread"
+ADD COLUMN IF NOT EXISTS "views" integer NOT NULL DEFAULT 0;

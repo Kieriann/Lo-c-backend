@@ -1507,7 +1507,7 @@
     "isEmployed": false,
     "availableFrom": "2025-10-20",
     "languages": [{ "lang": "fr", "level": "native" }, { "lang": "en", "level": "working" }],
-    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "junior" }],
+    "technologies": [{ "name": "COBOL", "level": "expert" }, { "name": "JCL", "level": "junior" }],
     "yearsOfExperience": 7
   },
   {
@@ -1522,7 +1522,7 @@
     "isEmployed": false,
     "availableFrom": "2025-10-20",
     "languages": [{ "lang": "fr", "level": "native" }, { "lang": "en", "level": "working" }],
-    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "junior" }],
+    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "expert" }],
     "yearsOfExperience": 7
   },
   {
@@ -1638,11 +1638,11 @@
     "city": "Paris",
     "remote": true,
     "teleworkDays": 3,
-    "tjm": 550,
+    "tjm": 650,
     "isEmployed": false,
     "availableFrom": "2025-10-20",
     "languages": [{ "lang": "fr", "level": "native" }, { "lang": "en", "level": "working" }],
-    "technologies": [{ "name": "COBOL", "level": "intermediate" }, { "name": "JCL", "level": "junior" }, { "name": "CICS", "level": "intermediate" }],
+    "technologies": [{ "name": "COBOL", "level": "expert" }, { "name": "JCL", "level": "expert" }, { "name": "CICS", "level": "intermediate" }],
     "yearsOfExperience": 7
   }
 ]

@@ -321,7 +321,18 @@ model ClientRequestTechnology {
   updatedAt  DateTime      @updatedAt
   request    ClientRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 }
+model SavedSearch {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String?
+  seq       Int
+  query     Json
+  createdAt DateTime @default(now()) @map("created_at")
 
+  @@unique([userId, seq], name: "saved_searches_user_seq_uidx")
+  @@map("saved_searches")
+}
 enum ServiceRequestStatus {
   DRAFT
   OPEN

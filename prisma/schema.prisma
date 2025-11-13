@@ -49,6 +49,7 @@ model User {
   suggestions            Suggestion[]
   Trainings              Training[]
   Documents              Document[]
+  saved_searches         SavedSearch[]
 }
 
 model Document {
@@ -321,9 +322,10 @@ model ClientRequestTechnology {
   updatedAt  DateTime      @updatedAt
   request    ClientRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 }
+
 model SavedSearch {
   id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
+  userId    Int
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String?
   seq       Int
@@ -333,6 +335,7 @@ model SavedSearch {
   @@unique([userId, seq], name: "saved_searches_user_seq_uidx")
   @@map("saved_searches")
 }
+
 enum ServiceRequestStatus {
   DRAFT
   OPEN
@@ -398,6 +401,6 @@ enum SuggestionStatus {
 model Forum {
   id        Int      @id @default(autoincrement())
   title     String
-  group     String   @default("general") 
+  group     String   @default("general")
   createdAt DateTime @default(now())
 }

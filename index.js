@@ -59,6 +59,7 @@ app.use(express.json())
 
 // ─── Import des routes ───────────────────────────────────────────────
 const authRoutes    = require('./src/routes/authRoutes.js')
+const authenticate = require('./src/middlewares/authMiddleware')
 const forgotPasswordRoutes = require('./src/routes/forgotPassword')
 const profileRoutes = require('./src/routes/profile.js')
 const adminRoutes   = require('./src/routes/admin')

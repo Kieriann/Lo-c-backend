@@ -28,7 +28,7 @@ router.post('/confirm-email', async (req, res) => {
 })
 
 // ─── Fallback pour les anciennes routes admin ─────────────────────
-router.all('*', (_req, res) => {
+router.use((_req, res) => {
   res.status(404).json({ error: 'Route admin indisponible' })
 })
 

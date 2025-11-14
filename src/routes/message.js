@@ -96,15 +96,30 @@ router.patch('/:id/read', authenticate, async (req, res) => {
   if (!messageId) return res.status(400).json({ error: 'id invalide' })
 
   try {
+    const existing = await prisma.message.findUnique({
+      where: { id: messageId },
+    })
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Message introuvable' })
+    }
+
+    // on ne peut marquer comme lu que SES propres messages reçus
+    if (existing.receiverId !== req.user.id) {
+      return res.status(403).json({ error: 'Interdit' })
+    }
+
     const updated = await prisma.message.update({
       where: { id: messageId },
       data: { isRead: true },
     })
+
     res.json(updated)
   } catch (error) {
     res.status(500).json({ error: 'Erreur lors de la mise à jour du statut' })
   }
 })
+
 
 /**
  * Récupérer la conversation avec un utilisateur + marquer reçus comme lus

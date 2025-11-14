@@ -55,6 +55,10 @@ const numToNearestLevel = (x) => {
  * Retour : [{ userId, score, details }] trié desc, max 10.
  */
 router.post('/compute', requireAuth, async (req, res) => {
+  if (!req.user || (req.user.role !== 'CLIENT' && !req.user.isAdmin)) {
+    return res.status(403).json({ error: 'Accès réservé aux clients' })
+  }
+
   try {
     // 1) Charger critères + poids
     let criteria = null

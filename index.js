@@ -75,25 +75,28 @@ const serviceRequestRouter = require('./src/routes/serviceRequest')
 
 
 // ─── Routes API ──────────────────────────────────────────────────────
-app.use('/api/auth',    authRoutes)
-app.use('/api/profile', profileRoutes)
-app.use('/api/admin',   adminRoutes)
-app.use('/api/documents', documentRoutes)
-app.use('/api/realisations', realisationRoutes);
+app.use('/api/auth', authRoutes)
 app.use('/api/forgot-password', forgotPasswordRoutes)
 app.use('/api/reset-password', resetPasswordRoutes)
-app.use('/api/sponsor', require('./src/routes/sponsor'))
-app.use('/api/client/requests', clientRequestsRouter)
 app.use('/api/cities', citiesRouter)
-app.use('/api/messages', messageRoutes)
-app.use('/api/client/profile', clientProfileRouter)
-app.use('/api/suggestions', suggestionsRouter)
-app.use('/api/client/requests', require('./src/routes/clientRequests'))
-app.use('/api/service-requests', serviceRequestRouter)
-app.use('/api/shortlist', require('./src/routes/shortlist.js'))
-app.use('/api/forum', require('./src/routes/forum'))
+
+app.use('/api/profile', authenticate, profileRoutes)
+app.use('/api/admin', authenticate, adminRoutes)
+app.use('/api/documents', authenticate, documentRoutes)
+app.use('/api/realisations', authenticate, realisationRoutes)
+app.use('/api/sponsor', authenticate, require('./src/routes/sponsor'))
+app.use('/api/client/requests', authenticate, clientRequestsRouter)
+app.use('/api/messages', authenticate, messageRoutes)
+app.use('/api/client/profile', authenticate, clientProfileRouter)
+app.use('/api/suggestions', authenticate, suggestionsRouter)
+app.use('/api/client/requests', authenticate, require('./src/routes/clientRequests'))
+app.use('/api/service-requests', authenticate, serviceRequestRouter)
+app.use('/api/shortlist', authenticate, require('./src/routes/shortlist.js'))
+app.use('/api/forum', authenticate, require('./src/routes/forum'))
+app.use('/api/avatars', authenticate, require('./src/routes/avatars'))
+
 app.use('/avatars', express.static(require('path').join(__dirname, 'public', 'avatars')))
-app.use('/api/avatars', require('./src/routes/avatars'))
+
 
 // ─── Routes de test/debug ───────────────────────────────────────────
 app.get('/test', (req, res) => {

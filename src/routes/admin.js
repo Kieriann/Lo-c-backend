@@ -3,65 +3,17 @@ const router = express.Router()
 const prisma = require('../utils/prismaClient')
 const authenticateToken = require('../middlewares/authMiddleware')
 
-// ─── Protection de la route par token ─────────────────────────────
+// ─── Protection globale : JWT + rôle admin ─────────────────────────
 router.use(authenticateToken)
-
-//
-// ─── Recherche des profils avec filtre texte libre ─────────────────
-//
-
-router.get('/profils', async (req, res) => {
-  const search = req.query.search || ''
-
-  try {
-    const users = await prisma.user.findMany({
-      where: {
-        OR: [
-          { email: { contains: search } },
-          { username: { contains: search } },
-          {
-            Experiences: {
-              some: {
-                OR: [
-                  { title: { contains: search } },
-                  { description: { contains: search } },
-                ],
-              },
-            },
-          },
-          {
-            Profile: {
-              OR: [
-                { firstname: { contains: search } },
-                { lastname: { contains: search } },
-                { bio: { contains: search } },
-              ],
-            },
-          },
-        ],
-      },
-      include: {
-        Profile: true,
-      },
-    })
-
-    const profils = users
-      .filter((u) => u.Profile)
-      .map((u) => ({
-        ...u.Profile,
-        User: { email: u.email },
-      }))
-
-    res.json(profils)
-  } catch (err) {
-    console.error('Erreur admin profils :', err)
-    res.status(500).json({ error: 'Erreur serveur' })
+router.use((req, res, next) => {
+  if (!req.user?.isAdmin) {
+    return res.status(403).json({ error: 'Accès refusé' })
   }
+  next()
 })
+
 // ─── Confirmer un email manuellement ───────────────────────────────
 router.post('/confirm-email', async (req, res) => {
-  if (!req.user?.isAdmin) return res.status(403).json({ error: 'Accès refusé' })
-
   const { email } = req.body || {}
   if (!email) return res.status(400).json({ error: 'Email requis' })
 
@@ -73,6 +25,11 @@ router.post('/confirm-email', async (req, res) => {
     data: { emailConfirmed: true, emailConfirmationToken: null },
   })
   res.json({ success: true })
+})
+
+// ─── Fallback pour les anciennes routes admin ─────────────────────
+router.all('*', (_req, res) => {
+  res.status(404).json({ error: 'Route admin indisponible' })
 })
 
 module.exports = router

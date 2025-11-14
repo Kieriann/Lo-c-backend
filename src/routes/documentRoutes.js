@@ -42,14 +42,30 @@ router.get('/count-cv', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' })
   }
 })
-router.get('/', async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
-    const documents = await prisma.document.findMany()
+    if (!req.user?.isAdmin) {
+      return res.status(404).json({ error: 'Route indisponible' })
+    }
+
+    const documents = await prisma.document.findMany({
+      select: {
+        id: true,
+        type: true,
+        originalName: true,
+        publicId: true,
+        version: true,
+        format: true,
+        userId: true,
+      },
+    })
+
     res.json(documents)
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' })
   }
 })
+
 
 // ─── Compter les PROFILS ayant au moins 1 CV ────────────────────────
 router.get('/count-cv-profiles', async (_req, res, next) => {

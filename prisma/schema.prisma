@@ -39,6 +39,7 @@ model User {
   CustomersReferences    CustomerReference[]
   Diplomas               Diploma[]
   Experiences            Experience[]
+  ForumUser              ForumUser[]
   receivedMessages       Message[]           @relation("ReceivedMessages")
   sentMessages           Message[]           @relation("SentMessages")
   Prestations            Prestation[]
@@ -49,7 +50,6 @@ model User {
   suggestions            Suggestion[]
   Trainings              Training[]
   Documents              Document[]
-  saved_searches         SavedSearch[]
 }
 
 model Document {
@@ -323,17 +323,36 @@ model ClientRequestTechnology {
   request    ClientRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 }
 
-model SavedSearch {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String?
-  seq       Int
-  query     Json
-  createdAt DateTime @default(now()) @map("created_at")
+model ForumUser {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  anonymousTag Int      @unique
+  avatarUrl    String?
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  Reply        Reply[]
+  Thread       Thread[]
+}
 
-  @@unique([userId, seq], name: "saved_searches_user_seq_uidx")
-  @@map("saved_searches")
+model Reply {
+  id        Int       @id @default(autoincrement())
+  content   String
+  createdAt DateTime? @default(now()) @db.Timestamp(6)
+  authorId  Int
+  threadId  Int
+  ForumUser ForumUser @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  Thread    Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model Thread {
+  id        Int       @id @default(autoincrement())
+  title     String
+  content   String
+  createdAt DateTime? @default(now()) @db.Timestamp(6)
+  authorId  Int
+  group     String?   @default("general")
+  views     Int       @default(0)
+  Reply     Reply[]
+  ForumUser ForumUser @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 enum ServiceRequestStatus {
@@ -396,11 +415,4 @@ enum SuggestionStatus {
   PENDING
   IN_REVIEW
   DONE
-}
-
-model Forum {
-  id        Int      @id @default(autoincrement())
-  title     String
-  group     String   @default("general")
-  createdAt DateTime @default(now())
 }

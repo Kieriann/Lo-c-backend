@@ -1,13 +1,11 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
-CREATE TABLE IF NOT EXISTS saved_searches (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name TEXT,
-  seq INTEGER NOT NULL,
-  query JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+CREATE TABLE IF NOT EXISTS public.saved_searches (
+  id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    integer     NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+  name       text,
+  seq        integer     NOT NULL,
+  query      jsonb       NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS saved_searches_user_seq_uidx ON saved_searches(user_id, seq);
-CREATE INDEX IF NOT EXISTS saved_searches_user_created_idx ON saved_searches(user_id, created_at DESC);
+ALTER TABLE public.saved_searches
+  ADD CONSTRAINT saved_searches_user_seq_uidx UNIQUE (user_id, seq);

@@ -195,22 +195,6 @@ async function resetPassword(req, res) {
   }
 }
 
-// pour delete un user par mail
-async function deleteUser(req, res) {
-  try {
-    if (!req.user?.isAdmin) {
-      return res.status(403).json({ error: 'Accès refusé' })
-    }
-
-    const email = req.body.email
-    if (!email) return res.status(400).json({ error: 'Email requis' })
-
-    await prisma.user.delete({ where: { email } })
-    res.json({ success: true })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-}
 
 
-module.exports = { signup, confirmEmail, login, me, resetPassword, deleteUser }
+module.exports = { signup, confirmEmail, login, me, resetPassword }

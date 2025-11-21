@@ -72,6 +72,8 @@ const messageRoutes = require('./src/routes/message.js')
 const clientProfileRouter = require('./src/routes/clientProfile')
 const suggestionsRouter = require('./src/routes/suggestions')
 const serviceRequestRouter = require('./src/routes/serviceRequest')
+const clientSavedSearchesRouter = require('./src/routes/clientSavedSearches')
+
 
 
 
@@ -94,6 +96,8 @@ app.use('/api/service-requests', authenticate, serviceRequestRouter)
 app.use('/api/shortlist', authenticate, require('./src/routes/shortlist.js'))
 app.use('/api/forum', authenticate, require('./src/routes/forum'))
 app.use('/api/avatars', authenticate, require('./src/routes/avatars'))
+app.use('/api/client-saved-searches', authenticate, clientSavedSearchesRouter)
+
 
 app.use('/avatars', express.static(require('path').join(__dirname, 'public', 'avatars')))
 

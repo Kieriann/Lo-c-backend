@@ -9,6 +9,7 @@
     "dev": "nodemon index.js",
     "test": "node --test",
     "check": "prisma validate && node --test",
+    "inactivity:notify": "node scripts/send-inactivity-warnings.js",
     "seed": "node prisma/seed.js",
     "postinstall": "prisma generate",
     "start": "prisma migrate deploy && node index.js"

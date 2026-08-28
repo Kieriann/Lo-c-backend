@@ -35,6 +35,9 @@ model User {
   passwordResetExpiresAt DateTime?
   tokenVersion           Int                 @default(0)
   firstLoginAt           DateTime?
+  lastLoginAt            DateTime?
+  inactivity22WarningSentAt DateTime?
+  inactivity23WarningSentAt DateTime?
   sponsorEmail           String?             @db.VarChar(255)
   role                   Role                @default(INDEP)
   Applications           Application[]

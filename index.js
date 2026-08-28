@@ -111,6 +111,11 @@ const io = new Server(server, {
 })
 app.set('io', io)
 
+if (process.env.INACTIVITY_WARNINGS_ENABLED === 'true') {
+  const { startInactivityWarningScheduler } = require('./src/jobs/inactivityWarnings')
+  startInactivityWarningScheduler()
+}
+
 io.use(async (socket, next) => {
   const authHeader = socket.handshake.headers.authorization || ''
   const token = socket.handshake.auth?.token || (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null)

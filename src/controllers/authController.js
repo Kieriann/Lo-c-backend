@@ -186,9 +186,16 @@ async function login(req, res, next) {
     }
 
     const isFirstLogin = !user.firstLoginAt
-    if (isFirstLogin) {
-      await prisma.user.update({ where: { id: user.id }, data: { firstLoginAt: new Date() } })
-    }
+    const loginAt = new Date()
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        ...(isFirstLogin ? { firstLoginAt: loginAt } : {}),
+        lastLoginAt: loginAt,
+        inactivity22WarningSentAt: null,
+        inactivity23WarningSentAt: null,
+      },
+    })
 
     const token = jwt.sign(
       {

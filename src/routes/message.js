@@ -2,18 +2,54 @@ const express = require('express')
 const router = express.Router()
 const prisma = require('../utils/prismaClient')
 const authenticate = require('../middlewares/authMiddleware')
+const rateLimit = require('../middlewares/rateLimit')
+const { cleanText, positiveInt } = require('../utils/security')
+
+const sendLimit = rateLimit({ windowMs: 60 * 1000, max: 20, name: 'messages' })
 
 /**
  * Envoyer un message
  */
-router.post('/', authenticate, async (req, res) => {
+router.post('/', authenticate, sendLimit, async (req, res) => {
   if (!req.user?.id) return res.status(401).json({ error: 'Non authentifié' })
 
-  const { receiverId, content } = req.body
-  const receiver = parseInt(receiverId, 10)
+  const receiver = positiveInt(req.body?.receiverId, { min: 1 })
+  const content = cleanText(req.body?.content, { max: 5000 })
   if (!receiver || !content) return res.status(400).json({ error: 'Données invalides' })
+  if (receiver === req.user.id) return res.status(400).json({ error: 'Destinataire invalide' })
 
   try {
+    const recipient = await prisma.user.findUnique({
+      where: { id: receiver },
+      select: {
+        id: true,
+        role: true,
+        emailConfirmed: true,
+        Profile: { select: { diffusionAutorisee: true } },
+      },
+    })
+    if (!recipient?.emailConfirmed) return res.status(404).json({ error: 'Destinataire introuvable' })
+
+    if (!req.user.isAdmin && req.user.role === 'CLIENT') {
+      if (recipient.role !== 'INDEP' || !recipient.Profile?.diffusionAutorisee) {
+        return res.status(403).json({ error: 'Conversation non autorisée' })
+      }
+    } else if (!req.user.isAdmin && req.user.role === 'INDEP') {
+      const existingConversation = await prisma.message.findFirst({
+        where: {
+          OR: [
+            { senderId: req.user.id, receiverId: receiver },
+            { senderId: receiver, receiverId: req.user.id },
+          ],
+        },
+        select: { id: true },
+      })
+      if (recipient.role !== 'CLIENT' || !existingConversation) {
+        return res.status(403).json({ error: 'Conversation non autorisée' })
+      }
+    } else if (!req.user.isAdmin) {
+      return res.status(403).json({ error: 'Conversation non autorisée' })
+    }
     const message = await prisma.message.create({
       data: {
         senderId: req.user.id,
@@ -92,7 +128,7 @@ router.get('/unread/count', authenticate, async (req, res) => {
 router.patch('/:id/read', authenticate, async (req, res) => {
   if (!req.user?.id) return res.status(401).json({ error: 'Non authentifié' })
 
-  const messageId = parseInt(req.params.id, 10)
+  const messageId = positiveInt(req.params.id, { min: 1 })
   if (!messageId) return res.status(400).json({ error: 'id invalide' })
 
   try {
@@ -127,7 +163,7 @@ router.patch('/:id/read', authenticate, async (req, res) => {
 router.get('/:otherId', authenticate, async (req, res) => {
   if (!req.user?.id) return res.status(401).json({ error: 'Non authentifié' })
 
-  const otherId = parseInt(req.params.otherId, 10)
+  const otherId = positiveInt(req.params.otherId, { min: 1 })
   if (!otherId) return res.status(400).json({ error: 'otherId invalide' })
 
   try {
@@ -138,7 +174,8 @@ router.get('/:otherId', authenticate, async (req, res) => {
           { senderId: otherId, receiverId: req.user.id },
         ],
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
       include: {
         sender: {
           select: {
@@ -158,7 +195,7 @@ router.get('/:otherId', authenticate, async (req, res) => {
       data: { isRead: true },
     })
 
-    res.json(messages)
+    res.json(messages.reverse())
   } catch (error) {
     console.error('GET /api/messages/:otherId failed:', error)
     res.status(500).json({ error: 'Erreur lors de la récupération des messages' })

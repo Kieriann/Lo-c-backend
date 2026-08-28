@@ -1,18 +1,20 @@
-// src/utils/mailer.js
+const sgMail = require('@sendgrid/mail')
 
-/**
- * sendEmail({ to, subject, text })
- * Pour l’instant, on simule l’envoi en loggant tout simplement.
- * Retourne une promesse qui résout en { to, subject, text }.
- */
-async function sendEmail({ to, subject, text }) {
-  console.log('=== Simulated e-mail send ===')
-  console.log(`To      : ${to}`)
-  console.log(`Subject : ${subject}`)
-  console.log('Content :')
-  console.log(text)
-  console.log('=== End of simulation ===')
-  return { to, subject, text }
+const apiKey = process.env.SENDGRID_API_KEY || ''
+const enabled = apiKey.startsWith('SG.')
+
+if (enabled) sgMail.setApiKey(apiKey)
+
+async function sendEmail({ to, subject, text, html }) {
+  if (!enabled) {
+    const error = new Error('Service e-mail non configuré')
+    error.code = 'EMAIL_NOT_CONFIGURED'
+    throw error
+  }
+
+  const from = process.env.EMAIL_FROM || 'no-reply@freesbiz.fr'
+  await sgMail.send({ to, from, subject, text, html })
+  return { sent: true }
 }
 
 module.exports = { sendEmail }

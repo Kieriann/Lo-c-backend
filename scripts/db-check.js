@@ -1,5 +1,5 @@
 // loic-backend/scripts/db-check.js
-const prisma = require('../utils/prismaClient')
+const prisma = require('../src/utils/prismaClient')
 
 const mask = s => (s || '').replace(/:\/\/([^:]+):([^@]+)@/, '://***:***@')
 

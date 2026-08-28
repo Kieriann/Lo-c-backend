@@ -1,200 +1,245 @@
-const bcrypt   = require('bcrypt')
-const jwt      = require('jsonwebtoken')
-const crypto   = require('crypto')
-const prisma   = require('../utils/prismaClient')
-const sgMail   = require('@sendgrid/mail')
-require('dotenv').config()
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
+const prisma = require('../utils/prismaClient')
+const authenticate = require('../middlewares/authMiddleware')
+const { sendEmail } = require('../utils/mailer')
+const {
+  cleanText,
+  hashToken,
+  isValidEmail,
+  normalizeEmail,
+  randomToken,
+  validatePassword,
+} = require('../utils/security')
 
-// ── SendGrid : activation seulement si clé valide ───────────────────
-const SENDGRID_KEY = process.env.SENDGRID_API_KEY || ''
-const CAN_SENDGRID = SENDGRID_KEY.startsWith('SG.')
-if (CAN_SENDGRID) {
-  sgMail.setApiKey(SENDGRID_KEY)
-} else {
-  console.warn('SendGrid désactivé : clé absente ou invalide.')
+const CONFIRMATION_TTL_MS = 24 * 60 * 60 * 1000
+const GENERIC_SIGNUP_MESSAGE = 'Si cette adresse peut être utilisée, un e-mail de confirmation va être envoyé.'
+const dummyHashPromise = bcrypt.hash(randomToken(24), 10)
+
+function frontendUrl(path, token) {
+  const origin = process.env.FRONT_URL || 'http://localhost:5173'
+  const url = new URL(path, origin)
+  if (token) url.searchParams.set('token', token)
+  return url.toString()
 }
 
-//
-// ─── Création de compte (inscription) ──────────────────────────────
-//
-async function signup(req, res) {
-  const emailRaw = req.body.email
-  const password = req.body.password
-  if (!emailRaw || !password) {
-    return res.status(400).json({ error: 'Email et mot de passe requis' })
-  }
-
-  const email = emailRaw.toLowerCase()
-  const existingUser = await prisma.user.findUnique({ where: { email } })
-  if (existingUser) {
-    return res.status(409).json({ error: 'Email déjà utilisé' })
-  }
-
-  const hashedPassword = await bcrypt.hash(password, 10)
-  const prenom = req.body.firstname || email.split('@')[0]
-  const token  = crypto.randomBytes(32).toString('hex')
-  const username = prenom
-
-  const role = req.body.role === 'CLIENT' ? 'CLIENT' : 'INDEP'
-
-
-const user = await prisma.user.create({
-  data: {
-    email,
-    username,
-    password: hashedPassword,
-    role,
-    isAdmin: email === 'loic.bernard15@yahoo.fr',
-    emailConfirmed: false,
-    emailConfirmationToken: token,
-  },
-})
-
-
-  const confirmUrl = `${process.env.FRONT_URL}/confirm-email?token=${user.emailConfirmationToken}`
-
-  // ── Envoi d’email non bloquant ───────────────────────────────────
-  if (CAN_SENDGRID) {
-    try {
-      await sgMail.send({
-        to: email,
-        from: 'no-reply@freesbiz.fr',
-        subject: 'Merci pour votre inscription – dernière étape',
-        text: `Bonjour,\n\nMerci pour votre inscription sur Free’s Biz.\n\nPour finaliser votre compte, cliquez sur le lien suivant :\n${confirmUrl}\n\nSi vous n’êtes pas à l’origine de cette demande, vous pouvez ignorer ce message.`,
-        html: `<p>Bonjour,</p><p>Merci pour votre inscription sur <strong>Free’s Biz</strong>.</p><p>Pour finaliser votre compte, cliquez <a href="${confirmUrl}">ici</a>.</p><p>Si vous n’êtes pas à l’origine de cette demande, vous pouvez ignorer ce message.</p>`,
-      })
-    } catch (e) {
-      console.error('SendGrid error:', e.response?.body || e.message)
-      // On continue quand même : l’inscription ne doit pas échouer.
-    }
-  }
-
-  return res
-    .status(201)
-    .json({ message: 'Inscription réussie ! Vérifiez vos mails pour confirmer votre adresse.' })
-}
-
-//
-// ─── Confirmation d’e-mail ─────────────────────────────────────────
-//
-async function confirmEmail(req, res) {
-  const { token } = req.query
-  if (!token) return res.status(400).send('Token manquant')
-
-  const user = await prisma.user.findUnique({
-    where: { emailConfirmationToken: String(token) },
-  })
-  if (!user) return res.status(404).send('Token invalide ou expiré')
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      emailConfirmed: true,
-      emailConfirmationToken: null,
-    },
-  })
-
-  return res
-    .status(200)
-    .json({ message: 'E-mail confirmé ! Vous pouvez maintenant vous connecter.' })
-}
-
-//
-// ─── Connexion ─────────────────────────────────────────────────────
-//
-async function login(req, res) {
-  const emailRaw = req.body.email
-  const password = req.body.password
-  if (!emailRaw || !password) {
-    return res.status(400).json({ error: 'Email et mot de passe requis' })
-  }
-  const normalizedEmail = emailRaw.toLowerCase()
-  const user = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
-    select: { id: true, email: true, password: true, emailConfirmed: true, isAdmin: true, firstLoginAt: true, role: true }
-  })
-
-  if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' })
-  if (!user.emailConfirmed) {
-    return res.status(403).json({ error: 'Email non confirmé' })
-  }
-
-  const isPasswordValid = await bcrypt.compare(password, user.password)
-  if (!isPasswordValid) {
-    return res.status(401).json({ error: 'Mot de passe incorrect' })
-  }
-
-  const expectedRole = req.body?.expectedRole || null
-if (expectedRole && expectedRole !== user.role) {
-  return res.status(409).json({
-    error: 'ROLE_MISMATCH',
-    message: user.role === 'CLIENT'
-      ? 'Compte Client détecté. Bascule vers l’espace Client.'
-      : 'Compte Indépendant détecté. Bascule vers l’espace Indépendant.',
-    actual: user.role,
-    expected: expectedRole,
+async function deliverConfirmation(email, rawToken) {
+  const confirmUrl = frontendUrl('/confirm-email', rawToken)
+  await sendEmail({
+    to: email,
+    subject: 'Confirmez votre inscription Free’s Biz',
+    text: `Pour confirmer votre adresse, ouvrez ce lien dans les 24 heures : ${confirmUrl}`,
+    html: `<p>Pour confirmer votre adresse Free’s Biz, utilisez ce lien valable 24 heures :</p><p><a href="${confirmUrl}">Confirmer mon adresse</a></p>`,
   })
 }
 
+async function signup(req, res, next) {
+  try {
+    const email = normalizeEmail(req.body?.email)
+    const password = req.body?.password
+    const passwordError = validatePassword(password)
 
-  const isFirstLogin = !user.firstLoginAt
-  if (isFirstLogin) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { firstLoginAt: new Date() }
+    if (!isValidEmail(email)) return res.status(400).json({ error: 'EMAIL_INVALID' })
+    if (passwordError) return res.status(400).json({ error: 'PASSWORD_INVALID', message: passwordError })
+
+    const role = req.body?.role === 'CLIENT' ? 'CLIENT' : 'INDEP'
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
     })
+
+    if (existingUser) return res.status(202).json({ message: GENERIC_SIGNUP_MESSAGE })
+
+    const rawToken = randomToken()
+    const tokenHash = hashToken(rawToken)
+    const hashedPassword = await bcrypt.hash(password, 12)
+    const username = cleanText(req.body?.firstname, { max: 80 }) || email.split('@')[0].slice(0, 80)
+
+    await prisma.user.create({
+      data: {
+        email,
+        username,
+        password: hashedPassword,
+        role,
+        isAdmin: false,
+        emailConfirmed: false,
+        emailConfirmationToken: tokenHash,
+        emailConfirmationExpiresAt: new Date(Date.now() + CONFIRMATION_TTL_MS),
+      },
+    })
+
+    try {
+      await deliverConfirmation(email, rawToken)
+    } catch (emailError) {
+      console.error('Confirmation email failed:', emailError.code || emailError.message)
+    }
+
+    return res.status(201).json({ message: GENERIC_SIGNUP_MESSAGE })
+  } catch (error) {
+    if (error.code === 'P2002') return res.status(202).json({ message: GENERIC_SIGNUP_MESSAGE })
+    return next(error)
   }
-
-  const jwtToken = jwt.sign(
-  { userId: user.id, isAdmin: user.isAdmin, role: user.role },
-  process.env.JWT_SECRET,
-  { expiresIn: '7d' }
-)
-
-  res.json({ token: jwtToken, isFirstLogin, user: { id: user.id, email: user.email } })
 }
 
-//
-// ─── Récupération de l’utilisateur connecté ───────────────────────
-//
-async function me(req, res) {
-  if (!req.user?.id) {
-    return res.status(401).json({ error: 'Utilisateur non authentifié' })
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    select: { id: true, email: true, username: true },
-  })
-  if (!user) {
-    return res.status(404).json({ error: 'Utilisateur non trouvé' })
-  }
-
-  res.json(user)
-}
-
-//
-// ─── Réinitialisation du mot de passe ─────────────────────────────
-//
-async function resetPassword(req, res) {
-  const { token, password } = req.body
-  if (!token || !password) return res.status(400).json({ error: 'Données manquantes' })
+async function resendConfirmation(req, res, next) {
+  const email = normalizeEmail(req.body?.email)
+  if (!isValidEmail(email)) return res.status(202).json({ message: GENERIC_SIGNUP_MESSAGE })
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
-    const hashed = await bcrypt.hash(password, 10)
-
-    await prisma.user.update({
-      where: { id: decoded.userId },
-      data: { password: hashed },
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, emailConfirmed: true },
     })
 
-    res.json({ success: true })
-  } catch (err) {
-    res.status(400).json({ error: 'Token invalide ou expiré' })
+    if (user && !user.emailConfirmed) {
+      const rawToken = randomToken()
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailConfirmationToken: hashToken(rawToken),
+          emailConfirmationExpiresAt: new Date(Date.now() + CONFIRMATION_TTL_MS),
+        },
+      })
+
+      try {
+        await deliverConfirmation(email, rawToken)
+      } catch (emailError) {
+        console.error('Confirmation resend failed:', emailError.code || emailError.message)
+      }
+    }
+
+    return res.status(202).json({ message: GENERIC_SIGNUP_MESSAGE })
+  } catch (error) {
+    return next(error)
   }
 }
 
+async function confirmEmail(req, res, next) {
+  const rawToken = String(req.query?.token || '')
+  if (!rawToken || rawToken.length > 256) return res.status(400).json({ error: 'TOKEN_INVALID' })
 
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        emailConfirmationToken: hashToken(rawToken),
+        emailConfirmationExpiresAt: { gt: new Date() },
+        emailConfirmed: false,
+      },
+      select: { id: true },
+    })
 
-module.exports = { signup, confirmEmail, login, me, resetPassword }
+    if (!user) return res.status(400).json({ error: 'TOKEN_INVALID_OR_EXPIRED' })
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailConfirmed: true,
+        emailConfirmationToken: null,
+        emailConfirmationExpiresAt: null,
+      },
+    })
+
+    return res.json({ message: 'E-mail confirmé. Vous pouvez maintenant vous connecter.' })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+async function login(req, res, next) {
+  try {
+    const email = normalizeEmail(req.body?.email)
+    const password = typeof req.body?.password === 'string' ? req.body.password : ''
+
+    if (!isValidEmail(email) || !password || password.length > 128) {
+      return res.status(401).json({ error: 'INVALID_CREDENTIALS' })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        emailConfirmed: true,
+        isAdmin: true,
+        firstLoginAt: true,
+        role: true,
+        tokenVersion: true,
+      },
+    })
+
+    const hash = user?.password || await dummyHashPromise
+    const passwordValid = await bcrypt.compare(password, hash)
+    if (!user || !passwordValid) return res.status(401).json({ error: 'INVALID_CREDENTIALS' })
+    if (!user.emailConfirmed) return res.status(403).json({ error: 'EMAIL_NOT_CONFIRMED' })
+
+    const expectedRole = req.body?.expectedRole
+    if (expectedRole && expectedRole !== user.role) {
+      return res.status(409).json({
+        error: 'ROLE_MISMATCH',
+        actual: user.role,
+        expected: expectedRole,
+        message: user.role === 'CLIENT'
+          ? 'Compte Client détecté. Bascule vers l’espace Client.'
+          : 'Compte Indépendant détecté. Bascule vers l’espace Indépendant.',
+      })
+    }
+
+    const isFirstLogin = !user.firstLoginAt
+    if (isFirstLogin) {
+      await prisma.user.update({ where: { id: user.id }, data: { firstLoginAt: new Date() } })
+    }
+
+    const token = jwt.sign(
+      {
+        type: 'access',
+        userId: user.id,
+        role: user.role,
+        version: user.tokenVersion,
+      },
+      process.env.JWT_SECRET,
+      {
+        algorithm: 'HS256',
+        audience: authenticate.AUDIENCE,
+        issuer: authenticate.ISSUER,
+        expiresIn: '2h',
+        jwtid: randomToken(16),
+      },
+    )
+
+    return res.json({
+      token,
+      isFirstLogin,
+      user: { id: user.id, email: user.email, role: user.role, isAdmin: user.isAdmin },
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+async function me(req, res, next) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, email: true, username: true, role: true, isAdmin: true },
+    })
+    if (!user) return res.status(404).json({ error: 'USER_NOT_FOUND' })
+    return res.json(user)
+  } catch (error) {
+    return next(error)
+  }
+}
+
+async function logout(req, res, next) {
+  try {
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { tokenVersion: { increment: 1 } },
+    })
+    return res.status(204).end()
+  } catch (error) {
+    return next(error)
+  }
+}
+
+module.exports = { confirmEmail, login, logout, me, resendConfirmation, signup }

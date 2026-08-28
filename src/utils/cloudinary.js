@@ -1,6 +1,7 @@
 // ./utils/cloudinary.js
 const { v2: cloudinary } = require('cloudinary');
 const streamifier = require('streamifier');
+const crypto = require('crypto');
 
 /* ─────── config ─────────────────────────────────────────── */
 cloudinary.config({
@@ -23,7 +24,7 @@ function isValidImageBuffer(buf) {
 }
 
 /* ─────── uploads ───────────────────────────────────────── */
-function uploadImage(buffer, originalName) {
+function uploadImage(buffer, userId) {
   return new Promise((resolve, reject) => {
     if (!buffer)          return reject(new Error('Buffer manquant'));
     if (!isValidImageBuffer(buffer))
@@ -32,9 +33,11 @@ function uploadImage(buffer, originalName) {
     const stream = cloudinary.uploader.upload_stream(
       {
         resource_type: 'image',
-        folder       : 'profil',
-        public_id    : originalName.split('.')[0],
-        overwrite    : true,
+        type         : 'authenticated',
+        folder       : `profil/${Number(userId)}`,
+        public_id    : crypto.randomUUID(),
+        overwrite    : false,
+        transformation: [{ width: 1600, height: 1600, crop: 'limit' }],
       },
       (err, res) => (err ? reject(err) : resolve({ ...res, publicId: res.public_id }))
     );
@@ -42,10 +45,20 @@ function uploadImage(buffer, originalName) {
   });
 }
 
-function uploadDocument(buffer, filename) {
+function uploadDocument(buffer, userId) {
   return new Promise((resolve, reject) => {
+    if (!buffer || buffer.length < 5 || buffer.subarray(0, 5).toString() !== '%PDF-') {
+      return reject(new Error('Le CV doit être un fichier PDF valide'));
+    }
+
     const stream = cloudinary.uploader.upload_stream(
-      { folder: 'cv', public_id: filename },
+      {
+        resource_type: 'raw',
+        type: 'authenticated',
+        folder: `cv/${Number(userId)}`,
+        public_id: crypto.randomUUID(),
+        overwrite: false,
+      },
       (err, res) => (err ? reject(err) : resolve({ ...res, publicId: res.public_id }))
     );
     streamifier.createReadStream(buffer).pipe(stream);
@@ -53,12 +66,33 @@ function uploadDocument(buffer, filename) {
 }
 
 /* ─────── delete ────────────────────────────────────────── */
-async function deleteFile(publicId) {
+async function deleteFile(publicId, resourceType = 'image', deliveryType = 'upload') {
+  if (!publicId) return;
   try {
-    await cloudinary.uploader.destroy(publicId, { resource_type: 'auto' });
+    await cloudinary.uploader.destroy(publicId, { resource_type: resourceType, type: deliveryType });
   } catch (err) {
     console.error('Cloudinary delete error:', err);
   }
+}
+
+function assetUrl({ publicId, resourceType = 'image', deliveryType = 'upload', version, format }) {
+  if (!publicId) return null;
+  const authenticated = deliveryType === 'authenticated';
+  if (authenticated) {
+    return cloudinary.utils.private_download_url(publicId, format || (resourceType === 'raw' ? 'pdf' : 'jpg'), {
+      resource_type: resourceType,
+      type: deliveryType,
+      expires_at: Math.floor(Date.now() / 1000) + 60 * 60,
+      attachment: false,
+    });
+  }
+  return cloudinary.url(publicId, {
+    secure: true,
+    resource_type: resourceType,
+    type: deliveryType,
+    version: version || undefined,
+    format: format || undefined,
+  });
 }
 
 /* ─────── exports ───────────────────────────────────────── */
@@ -67,4 +101,5 @@ module.exports = {
   uploadImage,
   uploadDocument,
   deleteFile,
+  assetUrl,
 };

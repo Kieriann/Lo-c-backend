@@ -1,1 +1,2 @@
-ALTER TABLE "Forum" ADD COLUMN "group" TEXT DEFAULT 'general';
+ALTER TABLE "Forum"
+  ADD COLUMN IF NOT EXISTS "group" TEXT DEFAULT 'general';

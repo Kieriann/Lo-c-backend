@@ -1,138 +1,138 @@
-
 const express = require('express')
 const cors = require('cors')
 const dotenv = require('dotenv')
-const app = express()
+const http = require('http')
+const path = require('path')
+const multer = require('multer')
+const { Server } = require('socket.io')
 
 dotenv.config()
-if (!process.env.JWT_SECRET) {
-  console.warn('⚠️ JWT_SECRET manquant dans .env')
+
+if (!process.env.JWT_SECRET || Buffer.byteLength(process.env.JWT_SECRET, 'utf8') < 32) {
+  throw new Error('JWT_SECRET doit contenir au moins 32 octets aléatoires')
 }
 
+const app = express()
+const server = http.createServer(app)
+const isProduction = process.env.NODE_ENV === 'production'
+const defaultOrigins = [
+  'https://freesbiz.fr',
+  'https://www.freesbiz.fr',
+  'https://loic-frontend.vercel.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:4173',
+  'http://127.0.0.1:4173',
+]
+const allowedOrigins = new Set(
+  (process.env.CORS_ORIGINS || defaultOrigins.join(','))
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean)
+)
+const originAllowed = origin => !origin || allowedOrigins.has(origin)
 
-// ─── Création de l'app Express ───────────────────────────────────────
-app.get('/db-ping', async (_req, res) => {
+app.disable('x-powered-by')
+app.set('trust proxy', 1)
+
+app.use((req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'no-referrer',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+  })
+  if (isProduction) res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  next()
+})
+
+app.use(cors({
+  origin: (origin, callback) => callback(originAllowed(origin) ? null : Object.assign(new Error('CORS_DENIED'), { status: 403 }), originAllowed(origin)),
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204,
+}))
+app.use(express.json({ limit: '200kb', strict: true }))
+
+app.get('/healthz', (_req, res) => res.status(200).json({ ok: true }))
+
+const authenticate = require('./src/middlewares/authMiddleware')
+
+app.use('/api/auth', require('./src/routes/authRoutes'))
+app.use('/api/forgot-password', require('./src/routes/forgotPassword'))
+app.use('/api/reset-password', require('./src/routes/resetPassword'))
+app.use('/api/cities', require('./src/routes/cities'))
+app.use('/api/profile', authenticate, require('./src/routes/profile'))
+app.use('/api/admin', authenticate, require('./src/routes/admin'))
+app.use('/api/documents', require('./src/routes/documentRoutes'))
+app.use('/api/realisations', authenticate, require('./src/routes/realisations'))
+app.use('/api/sponsor', authenticate, require('./src/routes/sponsor'))
+app.use('/api/client/requests', authenticate, require('./src/routes/clientRequests'))
+app.use('/api/messages', authenticate, require('./src/routes/message'))
+app.use('/api/client/profile', authenticate, require('./src/routes/clientProfile'))
+app.use('/api/suggestions', authenticate, require('./src/routes/suggestions'))
+app.use('/api/shortlist', authenticate, require('./src/routes/shortlist'))
+app.use('/api/forum', authenticate, require('./src/routes/forum'))
+app.use('/api/avatars', authenticate, require('./src/routes/avatars'))
+app.use('/api/client-saved-searches', authenticate, require('./src/routes/clientSavedSearches'))
+app.use('/avatars', express.static(path.join(__dirname, 'public', 'avatars'), { fallthrough: false, maxAge: '1d' }))
+
+app.get('/', (_req, res) => res.json({ name: 'Freesbiz API', status: 'ok' }))
+app.use('/api', (_req, res) => res.status(404).json({ error: 'NOT_FOUND' }))
+app.use((_req, res) => res.status(404).json({ error: 'NOT_FOUND' }))
+
+app.use((err, req, res, _next) => {
+  const isUploadError = err instanceof multer.MulterError
+  const status = isUploadError
+    ? (err.code === 'LIMIT_FILE_SIZE' ? 413 : 400)
+    : Number.isInteger(err.status) && err.status >= 400 && err.status < 600
+      ? err.status
+      : 500
+  if (status >= 500) {
+    console.error(`[${req.method} ${req.originalUrl}]`, isProduction ? err.message : err)
+  }
+  const message = status === 500
+    ? 'Erreur serveur'
+    : err.message === 'CORS_DENIED'
+      ? 'Accès refusé'
+    : isUploadError
+      ? 'Fichier refusé ou trop volumineux'
+      : err.message || 'Requête invalide'
+  res.status(status).json({ error: message })
+})
+
+const io = new Server(server, {
+  cors: {
+    origin: (origin, callback) => callback(originAllowed(origin) ? null : new Error('CORS_DENIED'), originAllowed(origin)),
+    credentials: true,
+  },
+})
+app.set('io', io)
+
+io.use(async (socket, next) => {
+  const authHeader = socket.handshake.headers.authorization || ''
+  const token = socket.handshake.auth?.token || (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null)
+  if (!token) return next(new Error('UNAUTHENTICATED'))
   try {
-    await require('./src/utils/prismaClient').$queryRaw`SELECT 1`
-    res.json({ ok: true })
-  } catch (e) {
-    console.error('DB PING ERROR:', e)
-    res.status(500).json({ ok: false, error: e.code || e.message })
+    socket.data.user = await authenticate.verifyAccessToken(token)
+    return next()
+  } catch {
+    return next(new Error('UNAUTHENTICATED'))
   }
 })
 
-
-// ─── Health check ────────────────────────────────────────────────────
-app.get('/healthz', (_req, res) => {
-  res.status(200).send('OK')
+io.on('connection', socket => {
+  socket.on('join', payload => {
+    const room = String(payload?.room || '')
+    if (/^thread:[1-9]\d*$/.test(room)) socket.join(room)
+  })
+  socket.on('leave', payload => {
+    const room = String(payload?.room || '')
+    if (/^thread:[1-9]\d*$/.test(room)) socket.leave(room)
+  })
 })
 
-// ─── CORS ────────────────────────────────────────────────────────────
-app.use(cors({
-  origin: (origin, callback) => {
-    const allowed = [
-      'https://freesbiz.fr',
-      'https://loic-frontend.vercel.app',
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'http://localhost:4173',     
-      'http://127.0.0.1:4173'
-    ]
-    const isVercelPreview = /^https:\/\/loic-frontend-[\w-]+\.vercel\.app$/.test(origin || '')
-
-    if (!origin || allowed.includes(origin) || isVercelPreview) {
-      callback(null, true)
-    } else {
-      callback(new Error('Not allowed by CORS'))
-    }
-  },
-  credentials: true,
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization'],
-  optionsSuccessStatus: 204
-}))
-
-
-
-// ─── Middlewares globaux ─────────────────────────────────────────────
-app.use(express.json())
-
-// ─── Import des routes ───────────────────────────────────────────────
-const authRoutes    = require('./src/routes/authRoutes.js')
-const authenticate = require('./src/middlewares/authMiddleware')
-const forgotPasswordRoutes = require('./src/routes/forgotPassword')
-const profileRoutes = require('./src/routes/profile.js')
-const adminRoutes   = require('./src/routes/admin')
-const documentRoutes = require('./src/routes/documentRoutes')
-const resetPasswordRoutes = require('./src/routes/resetPassword')
-const realisationRoutes = require('./src/routes/realisations');
-const clientRequestsRouter = require('./src/routes/clientRequests.js')
-const citiesRouter = require('./src/routes/cities.js')
-const messageRoutes = require('./src/routes/message.js')
-const clientProfileRouter = require('./src/routes/clientProfile')
-const suggestionsRouter = require('./src/routes/suggestions')
-const serviceRequestRouter = require('./src/routes/serviceRequest')
-const clientSavedSearchesRouter = require('./src/routes/clientSavedSearches')
-
-
-
-
-// ─── Routes API ──────────────────────────────────────────────────────
-app.use('/api/auth', authRoutes)
-app.use('/api/forgot-password', forgotPasswordRoutes)
-app.use('/api/reset-password', resetPasswordRoutes)
-app.use('/api/cities', citiesRouter)
-
-app.use('/api/profile', authenticate, profileRoutes)
-app.use('/api/admin', authenticate, adminRoutes)
-app.use('/api/documents', authenticate, documentRoutes)
-app.use('/api/realisations', authenticate, realisationRoutes)
-app.use('/api/sponsor', authenticate, require('./src/routes/sponsor'))
-app.use('/api/client/requests', authenticate, clientRequestsRouter)
-app.use('/api/messages', authenticate, messageRoutes)
-app.use('/api/client/profile', authenticate, clientProfileRouter)
-app.use('/api/suggestions', authenticate, suggestionsRouter)
-app.use('/api/service-requests', authenticate, serviceRequestRouter)
-app.use('/api/shortlist', authenticate, require('./src/routes/shortlist.js'))
-app.use('/api/forum', authenticate, require('./src/routes/forum'))
-app.use('/api/avatars', authenticate, require('./src/routes/avatars'))
-app.use('/api/client-saved-searches', authenticate, clientSavedSearchesRouter)
-
-
-app.use('/avatars', express.static(require('path').join(__dirname, 'public', 'avatars')))
-
-
-// ─── Routes de test/debug ───────────────────────────────────────────
-app.get('/test', (req, res) => {
-  console.log('/test appelé')
-  res.send('ok')
-})
-
-app.get('/', (req, res) => {
-  res.send('API Loïc en ligne')
-})
-
-// ─── Gestion globale des erreurs ────────────────────────────────────
-app.use((err, req, res, next) => {
-  console.error('💥 Erreur serveur :', err.stack)
-  res
-    .status(500)
-    .json({ error: err.message, stack: err.stack.split('\n').slice(0,5) })
-})
-// ── Socket.io + lancement serveur ────────────────────────────────────
-const http = require('http')
-const { Server } = require('socket.io')
-const server = http.createServer(app)
-const io = new Server(server, {
-  cors: { origin: ['http://localhost:5173'], credentials: true }
-})
-app.set('io', io)
-io.on('connection', (socket) => {
-  socket.on('join',  ({ room }) => socket.join(room))
-  socket.on('leave', ({ room }) => socket.leave(room))
-})
-
-const PORT = process.env.PORT || 4000
-server.listen(PORT, () => {
-  console.log(`Serveur démarré sur http://localhost:${PORT}`)
-})
+const PORT = Number(process.env.PORT) || 4000
+server.listen(PORT, () => console.log(`Serveur Freesbiz démarré sur le port ${PORT}`))

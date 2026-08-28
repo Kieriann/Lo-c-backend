@@ -2,14 +2,21 @@ const router = require('express').Router()
 const prisma = require('../utils/prismaClient')
 const requireAuth = require('../middlewares/authMiddleware')
 const { geocodeCity } = require('../utils/geocode')
+const { cleanText, positiveInt } = require('../utils/security')
 
 // ── Niveaux & similarités ───────────────────────────────────────────
 const LEVEL_ORDER = ['beginner','junior','intermediate','senior','expert']
 const LEVEL_CENTERS = { beginner:0.2, junior:0.4, intermediate:0.6, senior:0.8, expert:1 }
 
-const normLevel = (v) => String(v || '').toLowerCase().trim()
-const levelIndex = (v) => {
-  if (!v) return -1
+const normLevel = (v) => {
+  const s = String(v || '').toLowerCase().trim()
+  if (s === 'medium') return 'intermediate'
+  if (s === 'expert') return 'expert'
+  if (s === 'junior') return 'junior'
+  return s
+}
+
+const levelIndex = (v) => {  if (!v) return -1
   const i = LEVEL_ORDER.indexOf(String(v).toLowerCase())
   return i === -1 ? -1 : i
 }
@@ -19,7 +26,7 @@ const levelSimilarity = (requested, found) => {
   if (r === -1 || f === -1) return 0
   if (f >= r) return 1
   const gap = r - f
-  const steps = [1, 0.8, 0.6, 0.4, 0.2, 0] 
+  const steps = [1, 0.8, 0.6, 0.4, 0.2, 0]
   return steps[Math.min(gap, 5)]
 }
 
@@ -65,8 +72,13 @@ router.post('/compute', requireAuth, async (req, res) => {
     let weights = null
 
     if (req.body.clientRequestId) {
-      const cr = await prisma.clientRequest.findUnique({
-        where: { id: Number(req.body.clientRequestId) },
+      const requestId = positiveInt(req.body.clientRequestId, { min: 1 })
+      if (!requestId) return res.status(400).json({ error: 'Identifiant de demande invalide' })
+      const cr = await prisma.clientRequest.findFirst({
+        where: {
+          id: requestId,
+          ...(req.user.isAdmin ? {} : { userId: req.user.id }),
+        },
         include: { city: true, technologies: true }
       })
       if (!cr) return res.status(404).json({ error: 'Demande introuvable' })
@@ -81,7 +93,7 @@ router.post('/compute', requireAuth, async (req, res) => {
         startDate: null,
         // technologies: [{ name, level, weight }]
         technologies: (cr.technologies || []).map(t => ({
-          name: t.name,
+          name: t.technology,
           level: t.level,
           weight: t.weight ?? 1,
         })),
@@ -102,10 +114,35 @@ weights = {
       weights.availability ??= 2
     }
 
-// Sécuriser côté serveur : pour EXPERTISE on annule tjm/télétravail
-if (String(criteria.kind || '').toUpperCase() === 'EXPERTISE') {
+    const clampWeight = value => positiveInt(value, { min: 0, max: 10, fallback: 0 })
+    weights = {
+      skills: clampWeight(weights.skills),
+      tjm: clampWeight(weights.tjm),
+      telework: clampWeight(weights.telework),
+      availability: clampWeight(weights.availability),
+    }
+    criteria.technologies = (Array.isArray(criteria.technologies) ? criteria.technologies : [])
+      .slice(0, 30)
+      .map(item => typeof item === 'string'
+        ? { name: cleanText(item, { max: 100 }), level: 'intermediate', weight: 1 }
+        : {
+            name: cleanText(item?.name, { max: 100 }),
+            level: cleanText(item?.level, { max: 30 }),
+            weight: positiveInt(item?.weight, { min: 1, max: 10, fallback: 1 }),
+          })
+      .filter(item => item.name)
+
+// Sécuriser côté serveur : pour EXPERTISE et OUTIL on annule tjm/télétravail
+if (['EXPERTISE','OUTIL'].includes(String(criteria.kind || '').toUpperCase())) {
   weights.tjm = 0
   weights.telework = 0
+}
+
+if (String(criteria.kind || '').toUpperCase() === 'OUTIL') {
+  criteria.tjmMin = null
+  criteria.tjmMax = null
+  criteria.cityId = null
+  criteria.remoteDaysCount = 0
 }
 
 
@@ -124,8 +161,104 @@ if (String(criteria.kind || '').toUpperCase() === 'EXPERTISE') {
       cities.map(c => [`${norm(c.name)}|${(c.countryCode || '').toUpperCase()}`, c])
     )
 
+    // ── OUTIL : shortlist basée uniquement sur les réalisations ──
+    if (String(criteria.kind || '').toUpperCase() === 'OUTIL') {
+      const reqTechs = Array.isArray(criteria.technologies)
+        ? criteria.technologies.filter(t => t?.name)
+        : []
+
+      if (!reqTechs.length) return res.json([])
+
+      const reals = await prisma.realisation.findMany({
+        where: {
+          technos: { some: {} },
+          user: {
+            emailConfirmed: true,
+            role: 'INDEP',
+            Profile: { is: { diffusionAutorisee: true } },
+          },
+        },
+        include: {
+          user: {
+            include: {
+              Profile: true,
+            },
+          },
+          technos: true,
+        },
+      })
+
+      const bestByUser = new Map()
+
+      for (const r of reals) {        let sum = 0
+        let sumW = 0
+        const details = []
+
+        for (const t of reqTechs) {
+          const w = Math.max(1, Number(t.weight) || 1)
+          sumW += w
+
+          const norm = s =>
+            String(s || '')
+              .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+              .toLowerCase().replace(/[^a-z0-9]/g, '')
+
+          const found = r.technos.find(rt =>
+            norm(rt.name) === norm(t.name)
+          )
+
+          const match = found ? 100 : 0
+          sum += (match / 100) * w
+
+          details.push({
+            techName: t.name,
+            requestedLevel: t.level ?? null,
+            profileLevel: found?.level ?? null,
+            match,
+          })
+        }
+
+        const total = sumW ? Math.round((sum / sumW) * 100) : 0
+
+        const row = {
+          userId: r.userId,
+          fullName: [
+            r.user?.Profile?.firstname,
+            r.user?.Profile?.lastname,
+          ].filter(Boolean).join(' ') || null,
+          score: total,
+          details: {
+            skills: {
+              total,
+              weight: sumW,
+              details,
+            },
+            tjm: 0,
+            telework: 0,
+          },
+        }
+        const prev = bestByUser.get(r.userId)
+        if (!prev || (row.details.skills.total > prev.details.skills.total)) {
+          bestByUser.set(r.userId, row)
+        }
+      }
+
+      const scored = Array.from(bestByUser.values())
+
+      return res.json(
+        scored
+          .filter(s => (s.details.skills.total ?? 0) > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 10)
+      )
+    }
+
     // 2) Charger candidats
     const candidates = await prisma.profile.findMany({
+      where: {
+        diffusionAutorisee: true,
+        User: { is: { emailConfirmed: true, role: 'INDEP' } },
+      },
       include: {
         Address: true,
         User: {
@@ -360,7 +493,7 @@ const reqTechsRaw = Array.isArray(criteria.technologies) ? criteria.technologies
 const reqTechs = reqTechsRaw.map(t =>
   (typeof t === 'string' ? { name: t, level: 'intermediate', weight: 1 } : t)
 )
-const totalReqWeight = reqTechs.reduce((s, t) => s + Number(t?.weight || 0), 0)
+const totalReqWeight = reqTechs.reduce((s, t) => s + safeWeight(t?.weight), 0)
 
 const scored = await Promise.all(candidates.map(async p => {
   const expMap   = getExpTechMap(p)
@@ -388,7 +521,7 @@ const scored = await Promise.all(candidates.map(async p => {
     const matchNum  = (needLbl && haveLbl) ? levelSimilarity(needLbl, haveLbl) : 0
     const matchPct  = Math.round(matchNum * 100)
 
-weightedSumPct += matchPct * Number(t?.weight || 0)
+weightedSumPct += matchPct * w
 
     perTechDetails.push({
       techName: t.name || String(t),
@@ -440,6 +573,7 @@ weightedSumPct += matchPct * Number(t?.weight || 0)
       (p.lastName  ?? p.lastname  ?? p.User?.lastName  ?? p.User?.lastname)
     ].filter(Boolean).join(' ') || null,
     score: Math.round(safeScorePct),
+    city: p.Address?.city ?? null,
     details: {
       tjmValue: getTjm(p),
       tjmMin: p.smallDayRate ?? null,

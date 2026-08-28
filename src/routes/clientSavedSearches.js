@@ -1,9 +1,13 @@
 const router = require('express').Router()
 const prisma = require('../utils/prismaClient')
 const requireAuth = require('../middlewares/authMiddleware')
+const { requireRole } = require('../middlewares/roles')
+const { cleanText, positiveInt } = require('../utils/security')
+
+router.use(requireAuth, requireRole('CLIENT'))
 
 // GET /api/client-saved-searches
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const rows = await prisma.savedSearch.findMany({
       where: { userId: req.user.userId },
@@ -17,11 +21,11 @@ router.get('/', requireAuth, async (req, res) => {
 })
 
 // POST /api/client-saved-searches
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, query } = req.body || {}
 
-    if (!query || typeof query !== 'object') {
+    if (!query || typeof query !== 'object' || Array.isArray(query)) {
       return res.status(400).json({ error: 'Query manquante ou invalide' })
     }
 
@@ -34,7 +38,7 @@ router.post('/', requireAuth, async (req, res) => {
     const created = await prisma.savedSearch.create({
       data: {
         userId: req.user.userId,
-        name: name && name.trim() ? name.trim() : `Recherche ${nextSeq}`,
+        name: cleanText(name, { max: 100 }) || `Recherche ${nextSeq}`,
         seq: nextSeq,
         query,
       },
@@ -48,10 +52,14 @@ router.post('/', requireAuth, async (req, res) => {
 })
 
 // PUT /api/client-saved-searches/:id (renommer / mettre à jour query)
-router.put('/:id', requireAuth, async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
-    const id = Number(req.params.id)
+    const id = positiveInt(req.params.id, { min: 1 })
+    if (!id) return res.status(400).json({ error: 'Identifiant invalide' })
     const { name, query } = req.body || {}
+    if (query != null && (typeof query !== 'object' || Array.isArray(query))) {
+      return res.status(400).json({ error: 'Query invalide' })
+    }
 
     const existing = await prisma.savedSearch.findFirst({
       where: { id, userId: req.user.userId },
@@ -63,7 +71,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     const updated = await prisma.savedSearch.update({
       where: { id },
       data: {
-        ...(name ? { name: name.trim() } : {}),
+        ...(name ? { name: cleanText(name, { max: 100 }) } : {}),
         ...(query ? { query } : {}),
       },
     })
@@ -76,9 +84,10 @@ router.put('/:id', requireAuth, async (req, res) => {
 })
 
 // DELETE /api/client-saved-searches/:id
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
-    const id = Number(req.params.id)
+    const id = positiveInt(req.params.id, { min: 1 })
+    if (!id) return res.status(400).json({ error: 'Identifiant invalide' })
 
     const existing = await prisma.savedSearch.findFirst({
       where: { id, userId: req.user.userId },

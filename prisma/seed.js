@@ -1,47 +1,48 @@
 require('dotenv').config()
-const prisma = require('../utils/prismaClient')
 const bcrypt = require('bcrypt')
+const prisma = require('../src/utils/prismaClient')
+const { isValidEmail, normalizeEmail, validatePassword } = require('../src/utils/security')
 
-
+async function upsertAccount({ email, username, password, isAdmin, role }) {
+  const normalizedEmail = normalizeEmail(email)
+  const passwordError = validatePassword(password)
+  if (!isValidEmail(normalizedEmail) || passwordError) {
+    throw new Error(`Configuration seed invalide pour ${normalizedEmail || 'un compte'}${passwordError ? ` : ${passwordError}` : ''}`)
+  }
+  const passwordHash = await bcrypt.hash(password, 12)
+  return prisma.user.upsert({
+    where: { email: normalizedEmail },
+    update: { username, password: passwordHash, isAdmin, role, emailConfirmed: true },
+    create: { email: normalizedEmail, username, password: passwordHash, isAdmin, role, emailConfirmed: true },
+    select: { id: true, email: true, role: true },
+  })
+}
 
 async function main() {
-  // 1) Admin Loïc
-  const loicPasswordHash = await bcrypt.hash('loicisadmin', 10)
-  const loic = await prisma.user.upsert({
-    where: { email: 'loic.bernard15@yahoo.fr' },
-    update: {
-      password: loicPasswordHash,
-       emailConfirmed: true,
-    },
-    create: {
-      email: 'loic.bernard15@yahoo.fr',
-      username: 'Loïc',
-      password: loicPasswordHash,
-      isAdmin: true,
-      emailConfirmed: true,
-    },
-  })
-  console.log('✅ Loïc prêt :', loic.email)
+  if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+    throw new Error('ADMIN_EMAIL et ADMIN_PASSWORD sont requis pour exécuter le seed')
+  }
 
-  // 2) Utilisateur de test
-  const testPlain = 'test1234'
-  const testHash = await bcrypt.hash(testPlain, 10)
-  const testUser = await prisma.user.upsert({
-    where: { email: 'test@freesbiz.fr' },
-    update: {
-      password: testHash,
-      emailConfirmed: true,
-    },
-    create: {
-      email: 'test@freesbiz.fr',
-      username: 'testuser',
-      password: testHash,
-      isAdmin: false,
-      emailConfirmed: true,
-    },
+  const admin = await upsertAccount({
+    email: process.env.ADMIN_EMAIL,
+    username: process.env.ADMIN_USERNAME || 'Administrateur',
+    password: process.env.ADMIN_PASSWORD,
+    isAdmin: true,
+    role: 'ADMIN',
   })
-  console.log('✅ Test prêt :', testUser.email, '/', testPlain)
-    // 3) Villes de test
+  console.log(`Compte administrateur prêt : ${admin.email}`)
+
+  if (process.env.SEED_TEST_USER === 'true') {
+    await upsertAccount({
+      email: process.env.TEST_USER_EMAIL,
+      username: process.env.TEST_USER_USERNAME || 'Utilisateur test',
+      password: process.env.TEST_USER_PASSWORD,
+      isAdmin: false,
+      role: 'INDEP',
+    })
+    console.log('Compte de test créé sans afficher ses identifiants')
+  }
+
   await prisma.city.createMany({
     data: [
       { name: 'Paris', country: 'France', countryCode: 'FR' },
@@ -53,14 +54,11 @@ async function main() {
     ],
     skipDuplicates: true,
   })
-  console.log('✅ Villes de base insérées')
 }
 
 main()
-  .catch(e => {
-    console.error(e)
-    process.exit(1)
+  .catch(error => {
+    console.error(error.message)
+    process.exitCode = 1
   })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
+  .finally(() => prisma.$disconnect())

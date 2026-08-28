@@ -1,7 +1,10 @@
 const router = require('express').Router()
 const prisma = require('../utils/prismaClient')
 const requireAuth = require('../middlewares/authMiddleware')
-const authMiddleware = require('../middlewares/authMiddleware')
+const rateLimit = require('../middlewares/rateLimit')
+const { cleanText, positiveInt } = require('../utils/security')
+
+const writeLimit = rateLimit({ windowMs: 60 * 1000, max: 12, name: 'forum-write' })
 
 
 // utilitaire: récupérer io
@@ -33,11 +36,12 @@ async function createForumUser(userId, anonymousTag) {
 
 // génère un tag anonyme unique (entier)
 async function generateUniqueAnonymousTag() {
-  while (true) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
     const tag = Math.floor(100 + Math.random() * 9899)
     const exists = await getForumUserByTag(tag)
     if (!exists) return tag
   }
+  throw new Error('ANONYMOUS_TAG_EXHAUSTED')
 }
 
 // assure qu’un ForumUser existe pour l’utilisateur connecté
@@ -74,15 +78,16 @@ router.get('/me', requireAuth, async (req, res) => {
     res.json(fu)
   } catch (e) {
     console.error('FORUM /me error:', e)
-    res.status(500).json({ error: 'FORUM_ME_FAILED', code: e.code, message: e.message })
+    res.status(500).json({ error: 'FORUM_ME_FAILED' })
   }
 })
 
 // ── Threads : liste paginée ───────────────────────────────
 router.get('/threads', requireAuth, async (req, res) => {
   try {
-    const group = String(req.query.group || 'general')
-    const take = parseInt(req.query.take || '20', 10)
+    const group = cleanText(req.query.group || 'general', { max: 50 })
+    const take = positiveInt(req.query.take, { min: 1, max: 100, fallback: 20 })
+    if (!/^[\p{L}\p{N}_-]+$/u.test(group)) return res.status(400).json({ error: 'INVALID_GROUP' })
     const rows = await prisma.$queryRaw`
       SELECT
         t.id, t.title, t.content, t."group", t."createdAt", t."authorId", t.views,
@@ -109,15 +114,17 @@ router.get('/threads', requireAuth, async (req, res) => {
     res.json(threads)
   } catch (e) {
     console.error('FORUM /threads error:', e)
-    res.status(500).json({ error: 'THREAD_LIST_FAILED', code: e.code, message: e.message })
+    res.status(500).json({ error: 'THREAD_LIST_FAILED' })
   }
 })
 
 // ── Thread : création ─────────────────────────────────────
-router.post('/threads', requireAuth, async (req, res) => {
+router.post('/threads', requireAuth, writeLimit, async (req, res) => {
   try {
-    const { title, content, group = 'general' } = req.body || {}
-    if (!title?.trim() || !content?.trim()) {
+    const title = cleanText(req.body?.title, { max: 150 })
+    const content = cleanText(req.body?.content, { max: 10000 })
+    const group = cleanText(req.body?.group || 'general', { max: 50 })
+    if (!title || !content || !/^[\p{L}\p{N}_-]+$/u.test(group)) {
       return res.status(400).json({ error: 'MISSING_FIELDS' })
     }
     const fu = await ensureForumUser(req.user.id)
@@ -139,14 +146,15 @@ router.post('/threads', requireAuth, async (req, res) => {
     res.json(thread)
   } catch (e) {
     console.error('FORUM create thread error:', e)
-    res.status(500).json({ error: 'THREAD_CREATE_FAILED', code: e.code, message: e.message })
+    res.status(500).json({ error: 'THREAD_CREATE_FAILED' })
   }
 })
 
 // ── Thread : détails + réponses ───────────────────────────
 router.get('/threads/:id', requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id, 10)
+    const id = positiveInt(req.params.id, { min: 1 })
+    if (!id) return res.status(400).json({ error: 'INVALID_ID' })
 
     await prisma.$executeRaw`UPDATE "Thread" SET views = COALESCE(views,0) + 1 WHERE id = ${id}`
 
@@ -192,16 +200,16 @@ router.get('/threads/:id', requireAuth, async (req, res) => {
     res.json(thread)
   } catch (e) {
     console.error('FORUM get thread error:', e)
-    res.status(500).json({ error: 'THREAD_GET_FAILED', code: e.code, message: e.message })
+    res.status(500).json({ error: 'THREAD_GET_FAILED' })
   }
 })
 
 // ── Réponse : création ────────────────────────────────────
-router.post('/threads/:id/replies', requireAuth, async (req, res) => {
+router.post('/threads/:id/replies', requireAuth, writeLimit, async (req, res) => {
   try {
-    const threadId = parseInt(req.params.id, 10)
-    const { content } = req.body || {}
-    if (!content?.trim()) return res.status(400).json({ error: 'MISSING_CONTENT' })
+    const threadId = positiveInt(req.params.id, { min: 1 })
+    const content = cleanText(req.body?.content, { max: 10000 })
+    if (!threadId || !content) return res.status(400).json({ error: 'MISSING_CONTENT' })
 
     const fu = await ensureForumUser(req.user.id)
 
@@ -229,14 +237,17 @@ router.post('/threads/:id/replies', requireAuth, async (req, res) => {
     res.json(reply)
   } catch (e) {
     console.error('FORUM create reply error:', e)
-    res.status(500).json({ error: 'REPLY_CREATE_FAILED', code: e.code, message: e.message })
+    res.status(500).json({ error: 'REPLY_CREATE_FAILED' })
   }
 })
 
 // ── Avatar update ─────────────────────────────────────────
 router.put('/me/avatar', requireAuth, async (req, res) => {
   try {
-    const { url } = req.body || {}
+    const url = cleanText(req.body?.url, { max: 200 })
+    if (url && !/^\/avatars\/[a-zA-Z0-9._-]+\.(png|jpe?g)$/i.test(url)) {
+      return res.status(400).json({ error: 'INVALID_AVATAR' })
+    }
     const fu = await ensureForumUser(req.user.id)
     const rows = await prisma.$queryRaw`
       UPDATE "ForumUser"
@@ -247,13 +258,14 @@ router.put('/me/avatar', requireAuth, async (req, res) => {
     res.json(rows[0])
   } catch (e) {
     console.error('FORUM avatar update error:', e)
-    res.status(500).json({ error: 'FORUM_AVATAR_UPDATE_FAILED', code: e.code, message: e.message })
+    res.status(500).json({ error: 'FORUM_AVATAR_UPDATE_FAILED' })
   }
 })
 
 // DELETE fil
 router.delete('/threads/:id', requireAuth, async (req, res) => {
-  const id = Number(req.params.id)
+  const id = positiveInt(req.params.id, { min: 1 })
+  if (!id) return res.status(400).json({ error: 'INVALID_ID' })
 
   const thrRows = await prisma.$queryRaw`
     SELECT id, "authorId" FROM "Thread" WHERE id = ${id} LIMIT 1
@@ -273,7 +285,8 @@ router.delete('/threads/:id', requireAuth, async (req, res) => {
 
 // DELETE réponse
 router.delete('/reply/:id', requireAuth, async (req, res) => {
-  const id = Number(req.params.id)
+  const id = positiveInt(req.params.id, { min: 1 })
+  if (!id) return res.status(400).json({ error: 'INVALID_ID' })
 
   const repRows = await prisma.$queryRaw`
     SELECT id, "authorId" FROM "Reply" WHERE id = ${id} LIMIT 1

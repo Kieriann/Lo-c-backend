@@ -1,6 +1,7 @@
-// Exécuter : node scripts/import-profiles.js
+// Exécuter : IMPORT_FILE=/chemin/prive/profiles.json node scripts/import-profiles.js
 const prisma = require('../src/utils/prismaClient');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -69,9 +70,11 @@ function mapPrestations(p) {
 
 // ── Main ───────────────────────────────────────────────────────────
 async function main() {
-  const file = path.join(__dirname, '..', 'fixtures', 'profiles.json');
+  const file = process.env.IMPORT_FILE
+    ? path.resolve(process.env.IMPORT_FILE)
+    : path.join(__dirname, '..', '.private-imports', 'profiles.json');
   if (!fs.existsSync(file)) {
-    console.error('fixtures/profiles.json introuvable');
+    console.error('Fichier d’import privé introuvable. Définissez IMPORT_FILE ou utilisez .private-imports/profiles.json.');
     process.exit(1);
   }
 
@@ -82,15 +85,20 @@ async function main() {
     .replace(/,\s*([}\]])/g, '$1');
   const data = JSON.parse(cleaned);
 
-  const defaultHash = await bcrypt.hash('Password123!', 10);
-
   for (const p of data) {
     try {
       // ── 1) USER ──────────────────────────────────────────────────
       let user = await prisma.user.findUnique({ where: { email: p.email } });
       if (!user) {
+        const unusablePasswordHash = await bcrypt.hash(crypto.randomBytes(48).toString('base64url'), 12);
         user = await prisma.user.create({
-          data: { email: p.email, username: p.email, password: defaultHash },
+          data: {
+            email: p.email,
+            username: p.email,
+            password: unusablePasswordHash,
+            role: 'INDEP',
+            emailConfirmed: false,
+          },
         });
       } else if (!user.username) {
         user = await prisma.user.update({

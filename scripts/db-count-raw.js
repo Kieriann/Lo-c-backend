@@ -1,4 +1,4 @@
-const prisma = require('../utils/prismaClient')
+const prisma = require('../src/utils/prismaClient')
 
 async function main() {
   const rows = await prisma.$queryRawUnsafe(`

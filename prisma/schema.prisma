@@ -30,6 +30,10 @@ model User {
   createdAt              DateTime            @default(now())
   emailConfirmed         Boolean             @default(false)
   emailConfirmationToken String?             @unique
+  emailConfirmationExpiresAt DateTime?
+  passwordResetTokenHash String?              @unique
+  passwordResetExpiresAt DateTime?
+  tokenVersion           Int                 @default(0)
   firstLoginAt           DateTime?
   sponsorEmail           String?             @db.VarChar(255)
   role                   Role                @default(INDEP)
@@ -62,6 +66,7 @@ model Document {
   format       String?
   version      Int?
   publicId     String?
+  deliveryType String   @default("upload")
   User         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("documents")
@@ -72,6 +77,8 @@ model Profile {
   firstname          String?       @default("")
   lastname           String?       @default("")
   phone              String?       @default("")
+  email              String?
+  diffusionAutorisee Boolean  @default(false)
   bio                String?       @default("")
   languages          Json?         @default("[]")
   siret              String?       @default("")
@@ -144,6 +151,7 @@ model RealisationFile {
   originalName  String
   version       Int?
   publicId      String
+  deliveryType  String      @default("upload")
   format        String
   realisation   Realisation @relation("RealisationFiles", fields: [realisationId], references: [id], onDelete: Cascade)
 }
@@ -280,6 +288,20 @@ model ClientRequest {
   city            City?                     @relation(fields: [cityId], references: [id])
   client          User                      @relation(fields: [userId], references: [id])
   technologies    ClientRequestTechnology[]
+  expertiseObjective     String?
+  expertiseDuration      String?
+  prehireJobTitle        String?
+  prehireContractType    String?
+  prehireTrialPeriod     String?
+  prehireCompensation    Int?
+  alternanceJobTitle     String?
+  alternanceDescription  String?
+  alternanceRemuMode     String?
+  alternanceRemuAmount   Int?
+  skillsWeight           Int?                @default(5)
+  teleworkWeight         Int?                @default(2)
+  availabilityWeight     Int?                @default(2)
+  status                 ClientRequestStatus @default(PENDING)
 }
 
 model ClientProfile {
@@ -411,6 +433,14 @@ enum RequestKind {
   EXPERTISE
   MISSION
   PREEMBAUCHE
+  OUTIL
+  ALTERNANCE
+}
+
+enum ClientRequestStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
 }
 
 enum Level {

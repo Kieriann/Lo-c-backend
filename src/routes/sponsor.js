@@ -2,11 +2,13 @@ const express = require('express')
 const router = express.Router()
 const prisma = require('../utils/prismaClient')
 const auth = require('../middlewares/authMiddleware')
+const rateLimit = require('../middlewares/rateLimit')
+const { isValidEmail, normalizeEmail } = require('../utils/security')
 
-router.post('/', auth, async (req, res, next) => {
+router.post('/', auth, rateLimit({ windowMs: 60 * 60 * 1000, max: 10, name: 'sponsor' }), async (req, res, next) => {
   try {
-    const { email } = req.body
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const email = normalizeEmail(req.body?.email)
+    if (!isValidEmail(email)) {
       return res.status(400).json({ error: 'Email invalide' })
     }
 
@@ -16,7 +18,7 @@ router.post('/', auth, async (req, res, next) => {
     })
     if (!me) return res.status(404).json({ error: 'Utilisateur introuvable' })
 
-    if (me.email.toLowerCase() === email.toLowerCase()) {
+    if (me.email.toLowerCase() === email) {
       return res.status(400).json({ error: 'Impossible de se parrainer soi-même' })
     }
     if (me.sponsorEmail) {
